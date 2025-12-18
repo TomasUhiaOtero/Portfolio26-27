@@ -61,6 +61,14 @@ function Portfolio() {
       image: '/3_enraya_.webp',
       title: '3 en Raya Interactivo',
       description: 'El Clásico juego de 3 en raya con JS y CSS',
+      link: "https://github.com/TomasUhiaOtero/SpringBoot/tree/master/libreria-springboot/libreria"
+    },
+    {
+      id: 8,
+      category: 'Todos, Back-End',
+      image: '/4804282.jpg',
+      title: 'Servicio Springboot libreria',
+      description: 'Aplicación basada en arquitectura MVC',
       link: "https://github.com/TomasUhiaOtero/Practice"
     },
   ];

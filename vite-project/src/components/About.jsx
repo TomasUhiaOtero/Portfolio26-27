@@ -114,6 +114,12 @@ function About() {
                   <AccordionContent className="flex flex-col gap-1 text-balance">
 
                     <div className="flex flex-row gap-10 text-4xl">
+
+                    <HoverCard>
+                        <HoverCardTrigger className="hover:animate-pop cursor-pointer"><FaJava /></HoverCardTrigger>
+                        <HoverCardContent className="w-20 text-center text-gray-400 bg-[#181818]">Spring</HoverCardContent>
+                      </HoverCard>
+
                     <HoverCard>
                         <HoverCardTrigger className="hover:animate-pop cursor-pointer"><SiPython /></HoverCardTrigger>
                         <HoverCardContent className="w-20 text-center text-gray-400 bg-[#181818]">Python</HoverCardContent>
