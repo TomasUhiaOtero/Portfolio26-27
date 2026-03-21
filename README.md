@@ -35,7 +35,7 @@ Si te gustaría conocer más sobre mi trabajo o colaborar en algún proyecto:
 
 - 💌 **Email:** tomasuhiaotero@gmail.com  
 - 🐙 **GitHub:** [github.com/TomasUhiaOtero](https://github.com/TomasUhiaOtero)  
-- 💼 **LinkedIn:** [www.linkedin.com/in/tomás-uhía-otero-4407933a0](www.linkedin.com/in/tomás-uhía-otero-4407933a0)
+- 💼 **LinkedIn:** [www.linkedin.com/in/tomás-uhía-otero-4407933a0](https://www.linkedin.com/in/tom%C3%A1s-uh%C3%ADa-otero-4407933a0/?skipRedirect=true)
 
 ---
 
