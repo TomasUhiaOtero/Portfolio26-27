@@ -1,0 +1,147 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Design tokens. Ver docs/PLAN.md §2.
+   Paleta neutra tipo Apple: el color lo aportan las capturas de proyecto,
+   nunca la interfaz. El acento azul solo en enlaces y CTA.
+--------------------------------------------------------------------------- */
+@theme {
+  --color-ink: #1d1d1f;
+  --color-ink-soft: #6e6e73;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f5f5f7;
+  --color-surface-dark: #000000;
+  --color-on-dark: #f5f5f7;
+  --color-on-dark-soft: #a1a1a6;
+  --color-accent: #0071e3;
+  --color-accent-hover: #0077ed;
+  --color-hairline: rgb(0 0 0 / 0.1);
+  --color-hairline-dark: rgb(255 255 255 / 0.14);
+
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+
+  /* Escala tipográfica. Peso máximo 600 y tracking negativo en tamaños
+     grandes: es lo que separa "moderno" de "bold everywhere". */
+  --text-display: 3.25rem;
+  --text-display--line-height: 1.05;
+  --text-display--letter-spacing: -0.03em;
+  --text-display--font-weight: 600;
+
+  --text-title: 2.25rem;
+  --text-title--line-height: 1.08;
+  --text-title--letter-spacing: -0.022em;
+  --text-title--font-weight: 600;
+
+  --text-heading: 1.5rem;
+  --text-heading--line-height: 1.25;
+  --text-heading--letter-spacing: -0.012em;
+  --text-heading--font-weight: 600;
+
+  --text-body: 1.1875rem;
+  --text-body--line-height: 1.5;
+
+  --text-caption: 0.875rem;
+  --text-caption--line-height: 1.4;
+
+  --ease-apple: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ---------------------------------------------------------------------------
+   TODA regla de autor va dentro de @layer.
+   En Tailwind v4 una regla suelta gana a cualquier utilidad con layer sin
+   importar la especificidad, y pisa utilidades en silencio.
+--------------------------------------------------------------------------- */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    /* La barra fija mide 3.5rem; sin esto los anclajes quedan tapados. */
+    scroll-padding-top: 5rem;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--color-accent);
+    color: #fff;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}
+
+@layer components {
+  /* -------------------------------------------------------------------------
+     Reveal al hacer scroll.
+
+     Regla de oro: el contenido es visible por defecto. Solo se oculta si
+     JavaScript está corriendo (html.js) y el usuario no pidió menos
+     movimiento. Si el observer falla, si JS no carga o si el navegador no
+     dispara el evento, el contenido se ve igual — que es exactamente el bug
+     que hoy deja la sección de proyectos en blanco en móvil.
+  ------------------------------------------------------------------------- */
+  .reveal {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html.js .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition:
+        opacity 0.7s var(--ease-apple),
+        transform 0.7s var(--ease-apple);
+      transition-delay: var(--reveal-delay, 0ms);
+      will-change: opacity, transform;
+    }
+
+    html.js .reveal[data-visible="true"] {
+      opacity: 1;
+      transform: none;
+      will-change: auto;
+    }
+  }
+
+  /* Elementos que anima el timeline de entrada del hero. Mismo principio:
+     solo arrancan invisibles si GSAP va a poder animarlos. */
+  @media (prefers-reduced-motion: no-preference) {
+    html.js [data-intro] {
+      opacity: 0;
+    }
+  }
+
+  .hairline {
+    border-color: var(--color-hairline);
+  }
+
+  .hairline-dark {
+    border-color: var(--color-hairline-dark);
+  }
+}
+
+@layer utilities {
+  /* Contenedor de texto animado con yPercent: reserva sitio para las
+     descendentes (p, g, j, y) para que overflow-hidden no las recorte. */
+  .clip-safe {
+    padding-bottom: 0.2em;
+    margin-bottom: -0.2em;
+  }
+}
