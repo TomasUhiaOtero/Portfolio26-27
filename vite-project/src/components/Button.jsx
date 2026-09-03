@@ -1,49 +1,54 @@
 /**
- * Botón/enlace con la forma de píldora de Apple.
+ * Botón / enlace del sistema.
  *
- * Deliberadamente no hay hover con `transform`: aparte de que Apple no mueve
- * sus botones, los elementos que anima el timeline de entrada quedan con un
- * `transform` inline puesto por GSAP que anularía cualquier `:hover` con
- * transform sin dar ningún error. Aquí el hover es solo color.
+ * Reglas de motion que hereda del sistema de diseño:
+ *  - `rounded-sm` (6 px), nunca píldora;
+ *  - se enumeran las propiedades de la transición, nunca `transition: all`;
+ *  - `active:scale-[0.97]` con `--duration-press`;
+ *  - el hover solo se aplica con puntero fino, vía la variante `hover:` de
+ *    Tailwind v4, que ya compila a `@media (hover: hover)`.
  */
-
 const VARIANTS = {
   primary:
-    "bg-accent text-white hover:bg-accent-hover active:bg-accent-hover/90",
-  onDark:
-    "bg-white/10 text-on-dark ring-1 ring-inset ring-white/20 hover:bg-white/20 backdrop-blur-sm",
-  onLight:
-    "bg-ink/5 text-ink ring-1 ring-inset ring-black/10 hover:bg-ink/10",
+    "border-ink bg-ink text-canvas hover:border-ink-muted hover:bg-ink-muted",
+  secondary:
+    "border-line-strong bg-transparent text-ink hover:border-ink-muted hover:bg-surface",
+  ghost: "border-transparent bg-transparent text-ink hover:bg-surface",
+  link: "h-auto border-transparent bg-transparent px-0 text-accent underline decoration-1 underline-offset-4 hover:text-accent-ink active:scale-100",
 };
 
 const SIZES = {
-  md: "h-11 px-6 text-[15px]",
-  lg: "h-12 px-7 text-[17px]",
+  sm: "h-10 px-4 text-xs tracking-[0.02em]",
+  md: "h-11 px-6 text-sm",
+  lg: "h-13 px-8 text-base",
 };
 
 export default function Button({
   as: Component = "a",
   variant = "primary",
-  size = "lg",
+  size = "md",
   className = "",
   icon: Icon,
   children,
   ...rest
 }) {
+  const isLink = variant === "link";
+
   return (
     <Component
       className={[
-        "inline-flex items-center justify-center gap-2 rounded-full font-medium",
-        "transition-colors duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
-        "whitespace-nowrap",
+        "inline-flex shrink-0 items-center justify-center gap-2 rounded-sm border font-medium whitespace-nowrap",
+        "transition-[color,background-color,border-color,opacity,transform]",
+        "duration-[var(--duration-fast)] ease-[var(--ease-out)]",
+        "active:scale-[0.97] active:duration-[var(--duration-press)]",
         VARIANTS[variant] ?? VARIANTS.primary,
-        SIZES[size] ?? SIZES.lg,
+        isLink ? "" : (SIZES[size] ?? SIZES.md),
         className,
       ].join(" ")}
       {...rest}
     >
       {children}
-      {Icon ? <Icon className="size-[18px]" /> : null}
+      {Icon ? <Icon className="size-4" /> : null}
     </Component>
   );
 }

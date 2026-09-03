@@ -1,23 +1,18 @@
 /**
  * Tecnologías de un proyecto o de un puesto.
  *
- * Es la información que primero busca quien está valorando un perfil y que la
- * versión anterior del portfolio no daba en ninguna tarjeta.
+ * En mono y con radio de 4 px, no en píldoras: el sistema reserva
+ * `rounded-full` para badges y puntos indicadores, nunca para contenedores.
  */
-export default function StackChips({ items, tone = "light", className = "" }) {
+export default function StackChips({ items, className = "" }) {
   if (!items?.length) return null;
 
-  const chip =
-    tone === "dark"
-      ? "border-white/15 text-on-dark-soft"
-      : "border-black/10 text-ink-soft";
-
   return (
-    <ul className={`flex flex-wrap gap-2 ${className}`}>
+    <ul className={`flex flex-wrap gap-x-2 gap-y-2 ${className}`}>
       {items.map((item) => (
         <li
           key={item}
-          className={`rounded-full border px-3 py-1 text-caption ${chip}`}
+          className="meta rounded-xs border border-line px-2.5 py-1 text-ink-muted"
         >
           {item}
         </li>

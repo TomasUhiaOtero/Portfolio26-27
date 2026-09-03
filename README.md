@@ -1,6 +1,8 @@
 # Portfolio — Tomás Uhía Otero
 
-Portfolio personal. React + Vite + Tailwind CSS v4 + GSAP, bilingüe (español/inglés) y desplegado en Netlify.
+Portfolio personal. React + Vite + Tailwind CSS v4, bilingüe (español/inglés) y desplegado en Netlify.
+
+Sistema visual: minimalismo editorial en clave nocturna, adaptado del sistema de diseño de [landing-inmobiliaria](https://github.com/TomasUhiaOtero/landing-inmobiliaria) (monocromo cálido, serif editorial en titulares, componentes ultraplanos, un único acento latón).
 
 **En producción:** https://tomassportfolio.netlify.app/
 
@@ -31,9 +33,9 @@ Verifica siempre contra `npm run preview`, no solo contra el servidor de desarro
 
 ```
 vite-project/src/
-  components/   Piezas reutilizables (Nav, Reveal, ProjectCard, Button, icons…)
+  components/   Piezas reutilizables (Section, Container, Nav, Reveal, ProjectCard, Button, icons…)
   sections/     Una sección de la página = un archivo
-  hooks/        useIntroTimeline, useParallax, useReducedMotion
+  hooks/        useReducedMotion
   i18n/         Proveedor de idioma y hook useLanguage
   data/         content.js (todo el copy, es/en) y projects.js
   styles/       index.css — tokens de diseño y capas base
@@ -59,7 +61,11 @@ vite-project/src/
 
 **El panel del menú móvil lleva `inert` cuando está cerrado.** Sin eso sus enlaces siguen siendo tabulables pese al `aria-hidden`, y el foco del teclado viaja a elementos invisibles fuera de pantalla.
 
-**Ningún `:hover` usa `transform`.** GSAP deja estilos inline en los elementos que anima al terminar un timeline, y esos estilos anulan cualquier `:hover` con `transform` sin dar error.
+**El estado visible del reveal se declara dentro de la propia `@utility reveal`.** Si se declarase en `@layer base`, la capa `utilities` ganaría por orden de capa (no por especificidad) y el elemento se quedaría en `opacity: 0` para siempre.
+
+**Reglas de motion heredadas del sistema de diseño:** solo se animan `transform` y `opacity`; nunca `transition: all`; nunca `ease-in`; la interfaz por debajo de 300 ms y solo el scroll-reveal llega a 600 ms; `active:scale(0.97)` en pulsables; stagger de 60 ms con un máximo de 6 escalones.
+
+**Nada de `rounded-full` en contenedores, tarjetas ni botones.** Radios de 4 a 12 px. La píldora se reserva para badges y puntos indicadores.
 
 ---
 

@@ -1,84 +1,79 @@
+import Section from "../components/Section";
 import SectionHeader from "../components/SectionHeader";
 import Reveal from "../components/Reveal";
 import StackChips from "../components/StackChips";
 import { useLanguage } from "../i18n/useLanguage";
 
 /**
- * Línea de tiempo. Es el componente que mejor funcionaba en la versión
- * anterior, así que se conserva la idea y se reescribe el acabado: línea fina,
- * sin chips de color, y una frase de impacto por puesto en vez de una simple
- * lista de tecnologías.
+ * Trayectoria en formato editorial: cada puesto es una fila de 12 columnas con
+ * el periodo en mono a la izquierda y el contenido a la derecha, separadas por
+ * una regla de 1 px. Sin línea de tiempo con puntos: la retícula ya ordena.
  */
 export default function Experience() {
   const { t } = useLanguage();
 
   return (
-    <section id="experiencia" className="bg-surface-alt py-24 sm:py-32 lg:py-40">
-      <div className="mx-auto max-w-[70rem] px-5 sm:px-8">
-        <SectionHeader eyebrow={t.experience.eyebrow} title={t.experience.title} />
+    <Section id="experiencia" tone="bone">
+      <SectionHeader eyebrow={t.experience.eyebrow} title={t.experience.title} />
 
-        <ol className="mt-16 sm:mt-20">
-          {t.experience.items.map((item, index) => (
-            <Reveal
-              as="li"
-              key={item.company}
-              delay={index * 90}
-              className="relative border-l border-hairline pb-14 pl-8 last:pb-0 sm:pl-12"
-            >
-              <span
-                aria-hidden
-                className="absolute -left-[4.5px] top-2 size-[9px] rounded-full bg-ink"
-              />
+      <ol className="mt-14 md:mt-20">
+        {t.experience.items.map((item, index) => (
+          <Reveal
+            as="li"
+            key={item.company}
+            index={index}
+            className="grid gap-x-12 gap-y-4 border-t border-line py-10 md:py-12 lg:grid-cols-12"
+          >
+            <p className="meta text-ink-subtle uppercase lg:col-span-3">
+              {item.period}
+            </p>
 
-              <p className="text-caption uppercase tracking-[0.14em] text-ink-soft">
-                {item.period}
-              </p>
+            <div className="flex flex-col gap-4 lg:col-span-9">
+              <div className="flex flex-col gap-1">
+                <h3 className="text-2xl text-ink md:text-3xl">{item.role}</h3>
+                <p className="text-base text-ink-muted">{item.company}</p>
+              </div>
 
-              <h3 className="mt-3 text-heading sm:text-[1.75rem] sm:tracking-[-0.02em]">
-                {item.role}
-              </h3>
-
-              <p className="mt-1 text-body font-medium text-ink">
-                {item.company}
-              </p>
-
-              <p className="mt-4 max-w-[42rem] text-body text-ink-soft">
+              <p className="max-w-[68ch] text-base text-ink-muted">
                 {item.summary}
               </p>
-
-              <p className="mt-2 max-w-[42rem] text-body text-ink-soft">
+              <p className="max-w-[68ch] text-base text-ink-muted">
                 {item.impact}
               </p>
 
-              <StackChips items={item.stack} className="mt-6" />
+              <StackChips items={item.stack} className="mt-1" />
+            </div>
+          </Reveal>
+        ))}
+      </ol>
+
+      <div className="mt-20">
+        <Reveal>
+          <h3 className="text-2xl text-ink md:text-3xl">
+            {t.experience.educationTitle}
+          </h3>
+        </Reveal>
+
+        <dl className="mt-8">
+          {t.experience.education.map((item, index) => (
+            <Reveal
+              key={item.title}
+              index={index}
+              className="grid gap-x-12 gap-y-2 border-t border-line py-7 lg:grid-cols-12"
+            >
+              <dt className="meta text-ink-subtle uppercase lg:col-span-3">
+                {item.period}
+              </dt>
+              <dd className="lg:col-span-9">
+                <span className="block text-lg text-ink">{item.title}</span>
+                <span className="block text-base text-ink-muted">
+                  {item.place}
+                </span>
+              </dd>
             </Reveal>
           ))}
-        </ol>
-
-        <div className="mt-20 border-t border-hairline pt-14">
-          <Reveal>
-            <h3 className="text-heading">{t.experience.educationTitle}</h3>
-          </Reveal>
-
-          <dl className="mt-8 grid gap-8 sm:grid-cols-2">
-            {t.experience.education.map((item, index) => (
-              <Reveal key={item.title} delay={index * 80}>
-                <dt className="text-caption uppercase tracking-[0.14em] text-ink-soft">
-                  {item.period}
-                </dt>
-                <dd className="mt-2">
-                  <span className="block text-body font-medium">
-                    {item.title}
-                  </span>
-                  <span className="block text-body text-ink-soft">
-                    {item.place}
-                  </span>
-                </dd>
-              </Reveal>
-            ))}
-          </dl>
-        </div>
+        </dl>
       </div>
-    </section>
+    </Section>
   );
 }

@@ -1,5 +1,6 @@
 import Nav from "./components/Nav";
 import Hero from "./sections/Hero";
+import StatsBand from "./sections/StatsBand";
 import Projects from "./sections/Projects";
 import Experience from "./sections/Experience";
 import Stack from "./sections/Stack";
@@ -22,6 +23,7 @@ export default function App() {
 
       <main id="contenido">
         <Hero />
+        <StatsBand />
         <Projects />
         <Experience />
         <Stack />

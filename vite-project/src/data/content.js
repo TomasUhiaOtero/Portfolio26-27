@@ -40,14 +40,21 @@ export const content = {
       skipToContent: "Saltar al contenido",
     },
     hero: {
-      // Se anima palabra a palabra; el array evita partir la cadena en el JSX.
-      title: ["Desarrollador", "full-stack."],
-      subtitle: "Java y Spring en el backend, React en el frontend.",
-      description:
-        "Construyo aplicaciones web y móviles de principio a fin, desde el modelo de datos hasta la interfaz. Ahora mismo, en IT Salnés.",
+      eyebrow: "Tomás Uhía Otero — Pontevedra, España",
+      headline: "Desarrollador full-stack, del modelo de datos a la interfaz.",
+      subheadline:
+        "Java y Spring en el servidor, React en el cliente. Ahora mismo construyo software de gestión para hostelería en IT Salnés.",
       primaryCta: "Ver proyectos",
       secondaryCta: "Descargar CV",
-      scrollHint: "Desliza",
+    },
+    stats: {
+      label: "Cifras del perfil",
+      items: [
+        { value: "2+", label: "Años desarrollando" },
+        { value: "8", label: "Proyectos publicados" },
+        { value: "Java · React", label: "Stack principal" },
+        { value: "ES · EN", label: "Idiomas de trabajo" },
+      ],
     },
     projects: {
       eyebrow: "Trabajo",
@@ -102,7 +109,7 @@ export const content = {
       ],
     },
     stack: {
-      eyebrow: "Herramientas",
+      eyebrow: "Tecnologías",
       title: "Stack",
       intro: "Con lo que trabajo a diario, y con lo que estoy más cómodo.",
       groups: [
@@ -145,7 +152,7 @@ export const content = {
     },
     footer: {
       rights: "Todos los derechos reservados.",
-      builtWith: "Hecho con React, Tailwind CSS y GSAP.",
+      builtWith: "Hecho con React, Vite y Tailwind CSS.",
       backToTop: "Volver arriba",
     },
   },
@@ -168,13 +175,21 @@ export const content = {
       skipToContent: "Skip to content",
     },
     hero: {
-      title: ["Full-stack", "developer."],
-      subtitle: "Java and Spring on the back end, React on the front end.",
-      description:
-        "I build web and mobile applications end to end, from the data model to the interface. Currently at IT Salnés.",
+      eyebrow: "Tomás Uhía Otero — Pontevedra, Spain",
+      headline: "Full-stack developer, from the data model to the interface.",
+      subheadline:
+        "Java and Spring on the server, React on the client. Currently building hospitality management software at IT Salnés.",
       primaryCta: "See work",
       secondaryCta: "Download résumé",
-      scrollHint: "Scroll",
+    },
+    stats: {
+      label: "Profile figures",
+      items: [
+        { value: "2+", label: "Years building" },
+        { value: "8", label: "Shipped projects" },
+        { value: "Java · React", label: "Core stack" },
+        { value: "ES · EN", label: "Working languages" },
+      ],
     },
     projects: {
       eyebrow: "Work",
@@ -225,7 +240,7 @@ export const content = {
       ],
     },
     stack: {
-      eyebrow: "Tools",
+      eyebrow: "Technologies",
       title: "Stack",
       intro: "What I work with day to day, and what I am most comfortable in.",
       groups: [
@@ -267,7 +282,7 @@ export const content = {
     },
     footer: {
       rights: "All rights reserved.",
-      builtWith: "Built with React, Tailwind CSS and GSAP.",
+      builtWith: "Built with React, Vite and Tailwind CSS.",
       backToTop: "Back to top",
     },
   },

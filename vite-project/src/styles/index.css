@@ -1,147 +1,196 @@
 @import "tailwindcss";
 
-/* ---------------------------------------------------------------------------
-   Design tokens. Ver docs/PLAN.md §2.
-   Paleta neutra tipo Apple: el color lo aportan las capturas de proyecto,
-   nunca la interfaz. El acento azul solo en enlaces y CTA.
---------------------------------------------------------------------------- */
+/* ==========================================================================
+ * SISTEMA DE DISEÑO — Minimalismo editorial, versión nocturna
+ *
+ * Adaptación del sistema de la landing inmobiliaria (monocromo cálido, serif
+ * editorial en titulares, componentes ultraplanos, un único acento latón) a
+ * un fondo oscuro. Se conservan sus reglas y sus tokens de motion; lo que
+ * cambia es la polaridad de la escala de grises.
+ *
+ * Tailwind v4: los tokens viven aquí, no hay tailwind.config.
+ * ========================================================================== */
+
 @theme {
-  --color-ink: #1d1d1f;
-  --color-ink-soft: #6e6e73;
-  --color-surface: #ffffff;
-  --color-surface-alt: #f5f5f7;
-  --color-surface-dark: #000000;
-  --color-on-dark: #f5f5f7;
-  --color-on-dark-soft: #a1a1a6;
-  --color-accent: #0071e3;
-  --color-accent-hover: #0077ed;
-  --color-hairline: rgb(0 0 0 / 0.1);
-  --color-hairline-dark: rgb(255 255 255 / 0.14);
+  /* --- Color: monocromo cálido nocturno ---------------------------------
+   * Nunca negro absoluto: #0e0d0c tiene la misma calidez que el #14110F del
+   * sistema original, solo que como fondo en vez de como tinta.
+   * -------------------------------------------------------------------- */
+  --color-canvas: #0e0d0c;
+  --color-bone: #141211;
+  --color-surface: #191615;
+  --color-ink: #f3f0eb;
+  --color-ink-muted: #a8a099;
+  --color-ink-subtle: #8a827a;
+  --color-line: #262220;
+  --color-line-strong: #383230;
+  --color-accent: #c2a878;
+  --color-accent-ink: #d8c49b;
+  --color-accent-wash: #201b14;
+  --color-scrim: rgba(6, 5, 5, 0.72);
 
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    Helvetica, Arial, sans-serif;
+  /* --- Tipografía --------------------------------------------------------
+   * Serif editorial en titulares, sans para cuerpo e interfaz, mono para
+   * metadatos tabulares (años, referencias).
+   * -------------------------------------------------------------------- */
+  --font-serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --font-sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica,
+    Arial, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  /* Escala tipográfica. Peso máximo 600 y tracking negativo en tamaños
-     grandes: es lo que separa "moderno" de "bold everywhere". */
-  --text-display: 3.25rem;
+  --text-display: clamp(2.75rem, 6vw, 5rem);
   --text-display--line-height: 1.05;
-  --text-display--letter-spacing: -0.03em;
-  --text-display--font-weight: 600;
+  --text-display--letter-spacing: -0.02em;
 
-  --text-title: 2.25rem;
-  --text-title--line-height: 1.08;
-  --text-title--letter-spacing: -0.022em;
-  --text-title--font-weight: 600;
+  /* --- Forma y elevación ------------------------------------------------
+   * Radios pequeños. Nada de rounded-full en contenedores, tarjetas ni
+   * botones: solo en badges y puntos indicadores.
+   * -------------------------------------------------------------------- */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
 
-  --text-heading: 1.5rem;
-  --text-heading--line-height: 1.25;
-  --text-heading--letter-spacing: -0.012em;
-  --text-heading--font-weight: 600;
+  /* Sobre fondo oscuro una sombra no se ve: la elevación la da la línea de
+     1px y un fondo un punto más claro. Se dejan declaradas y casi nulas. */
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-lift: 0 2px 10px rgba(0, 0, 0, 0.45);
 
-  --text-body: 1.1875rem;
-  --text-body--line-height: 1.5;
+  /* --- Motion ------------------------------------------------------------ */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 
-  --text-caption: 0.875rem;
-  --text-caption--line-height: 1.4;
-
-  --ease-apple: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-press: 140ms;
+  --duration-fast: 180ms;
+  --duration-base: 240ms;
+  --duration-slow: 400ms;
+  --duration-reveal: 600ms;
 }
 
-/* ---------------------------------------------------------------------------
-   TODA regla de autor va dentro de @layer.
-   En Tailwind v4 una regla suelta gana a cualquier utilidad con layer sin
-   importar la especificidad, y pisa utilidades en silencio.
---------------------------------------------------------------------------- */
+/* --- Utilidades de marca -------------------------------------------------- */
+
+/* Kicker editorial sobre los titulares. */
+@utility eyebrow {
+  font-size: var(--text-xs);
+  line-height: 1.2;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-ink-subtle);
+}
+
+/* Metadatos tabulares: años, referencias, cifras. */
+@utility meta {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Scroll-reveal editorial: translateY(12px) + opacity 0 → visible en 600 ms.
+ *
+ * El estado visible se declara AQUÍ, dentro de la misma @utility. Si se
+ * declarase en @layer base, la capa `utilities` ganaría por orden de capa (no
+ * por especificidad) y el elemento se quedaría en opacity: 0 para siempre.
+ *
+ * El estado oculto está condicionado a `html.js`: sin JavaScript el contenido
+ * se ve entero, sin animación. */
+@utility reveal {
+  opacity: 1;
+  transform: none;
+  transition-property: opacity, transform;
+  transition-duration: var(--duration-reveal);
+  transition-timing-function: var(--ease-out);
+
+  html.js & {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  html.js &[data-visible="true"] {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Textura de fondo: mancha radial cálida a opacidad muy baja. No es un
+   degradado de color, es una veladura para que el negro no sea plano. */
+@utility surface-wash {
+  background-image: radial-gradient(
+    72% 56% at 50% 0%,
+    rgba(194, 168, 120, 0.07) 0%,
+    rgba(194, 168, 120, 0) 68%
+  );
+}
+
+/* --- Estilos base --------------------------------------------------------- */
+
 @layer base {
   html {
+    -webkit-text-size-adjust: 100%;
     scroll-behavior: smooth;
     /* La barra fija mide 3.5rem; sin esto los anclajes quedan tapados. */
-    scroll-padding-top: 5rem;
-    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: 5.5rem;
+    background-color: var(--color-canvas);
   }
 
   body {
-    background-color: var(--color-surface);
+    background-color: var(--color-canvas);
     color: var(--color-ink);
     font-family: var(--font-sans);
-    font-size: var(--text-body);
-    line-height: var(--text-body--line-height);
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    text-wrap: balance;
+  }
+
   :focus-visible {
     outline: 2px solid var(--color-accent);
-    outline-offset: 3px;
-    border-radius: 4px;
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
   }
 
   ::selection {
-    background: var(--color-accent);
-    color: #fff;
+    background-color: var(--color-accent-wash);
+    color: var(--color-accent-ink);
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    html {
-      scroll-behavior: auto;
-    }
+  hr {
+    border-color: var(--color-line);
   }
 }
 
-@layer components {
-  /* -------------------------------------------------------------------------
-     Reveal al hacer scroll.
-
-     Regla de oro: el contenido es visible por defecto. Solo se oculta si
-     JavaScript está corriendo (html.js) y el usuario no pidió menos
-     movimiento. Si el observer falla, si JS no carga o si el navegador no
-     dispara el evento, el contenido se ve igual — que es exactamente el bug
-     que hoy deja la sección de proyectos en blanco en móvil.
-  ------------------------------------------------------------------------- */
-  .reveal {
-    opacity: 1;
+/* --- Reducción de movimiento ---------------------------------------------
+ * Se conservan opacidad y color; se neutralizan desplazamiento y escala.
+ * Fuera de @layer y con !important a propósito, para ganar también al
+ * transition-delay en línea que pone el stagger de <Reveal>.
+ * ------------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
   }
 
-  @media (prefers-reduced-motion: no-preference) {
-    html.js .reveal {
-      opacity: 0;
-      transform: translateY(24px);
-      transition:
-        opacity 0.7s var(--ease-apple),
-        transform 0.7s var(--ease-apple);
-      transition-delay: var(--reveal-delay, 0ms);
-      will-change: opacity, transform;
-    }
-
-    html.js .reveal[data-visible="true"] {
-      opacity: 1;
-      transform: none;
-      will-change: auto;
-    }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
   }
 
-  /* Elementos que anima el timeline de entrada del hero. Mismo principio:
-     solo arrancan invisibles si GSAP va a poder animarlos. */
-  @media (prefers-reduced-motion: no-preference) {
-    html.js [data-intro] {
-      opacity: 0;
-    }
-  }
-
-  .hairline {
-    border-color: var(--color-hairline);
-  }
-
-  .hairline-dark {
-    border-color: var(--color-hairline-dark);
-  }
-}
-
-@layer utilities {
-  /* Contenedor de texto animado con yPercent: reserva sitio para las
-     descendentes (p, g, j, y) para que overflow-hidden no las recorte. */
-  .clip-safe {
-    padding-bottom: 0.2em;
-    margin-bottom: -0.2em;
+  [data-reveal] {
+    transform: none !important;
+    opacity: 1 !important;
+    transition-delay: 0ms !important;
   }
 }

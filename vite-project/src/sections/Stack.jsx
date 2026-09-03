@@ -1,47 +1,53 @@
+import Section from "../components/Section";
 import SectionHeader from "../components/SectionHeader";
 import Reveal from "../components/Reveal";
 import { useLanguage } from "../i18n/useLanguage";
 
 /**
- * Sustituye a "Mis Servicios".
+ * Rejilla bento asimétrica: el ancho de cada bloque alterna 7/5 y 5/7 sobre 12
+ * columnas, de modo que ninguna fila repite la anterior.
  *
- * Las cinco tarjetas de servicios con emoji ("Desarrollo Web", "Desarrollo
- * Móvil"…) describían una agencia genérica y no decían nada concreto de él.
- * Esto sí: qué tecnologías usa, agrupadas por capa.
+ * Sustituye a las cinco tarjetas de "Servicios" con emoji, que describían una
+ * agencia genérica y no decían nada concreto de él.
  */
+const SPAN_PATTERN = [
+  "lg:col-span-7",
+  "lg:col-span-5",
+  "lg:col-span-5",
+  "lg:col-span-7",
+];
+
 export default function Stack() {
   const { t } = useLanguage();
 
   return (
-    <section
-      id="stack"
-      className="bg-surface-dark py-24 text-on-dark sm:py-32 lg:py-40"
-    >
-      <div className="mx-auto max-w-[70rem] px-5 sm:px-8">
-        <SectionHeader
-          eyebrow={t.stack.eyebrow}
-          title={t.stack.title}
-          intro={t.stack.intro}
-          tone="dark"
-        />
+    <Section id="stack" tone="canvas">
+      <SectionHeader
+        eyebrow={t.stack.eyebrow}
+        title={t.stack.title}
+        intro={t.stack.intro}
+      />
 
-        <div className="mt-16 grid gap-x-10 gap-y-14 sm:mt-20 sm:grid-cols-2 lg:grid-cols-4">
-          {t.stack.groups.map((group, index) => (
-            <Reveal key={group.title} delay={index * 80}>
-              <h3 className="border-b border-hairline-dark pb-4 text-caption uppercase tracking-[0.14em] text-on-dark-soft">
-                {group.title}
-              </h3>
-              <ul className="mt-5 space-y-2.5">
-                {group.items.map((item) => (
-                  <li key={item} className="text-body text-on-dark">
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </Reveal>
-          ))}
-        </div>
-      </div>
-    </section>
+      <ul className="mt-14 grid gap-4 md:mt-20 lg:grid-cols-12">
+        {t.stack.groups.map((group, index) => (
+          <Reveal
+            as="li"
+            key={group.title}
+            index={index}
+            className={`flex flex-col gap-5 rounded-md border border-line bg-bone p-6 md:p-10 ${SPAN_PATTERN[index % SPAN_PATTERN.length]}`}
+          >
+            <p className="eyebrow">{group.title}</p>
+
+            <ul className="flex flex-wrap gap-x-6 gap-y-2">
+              {group.items.map((item) => (
+                <li key={item} className="text-lg text-ink md:text-xl">
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </Reveal>
+        ))}
+      </ul>
+    </Section>
   );
 }

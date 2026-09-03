@@ -1,57 +1,55 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+
+const STAGGER_MS = 60;
+const MAX_STAGGER_STEPS = 6;
 
 /**
- * Aparición al entrar en pantalla.
+ * Scroll-reveal editorial: translateY(12px) + opacity 0 → visible en 600 ms con
+ * `--ease-out`.
  *
- * Usa IntersectionObserver en vez de ScrollTrigger a propósito: el observer
- * dispara al observar aunque el usuario no haya hecho scroll todavía, no
- * depende de que se recalculen posiciones y no se desincroniza con scroll
- * suavizado. Es la causa raíz del bug que hoy deja la sección de proyectos
- * permanentemente en `opacity: 0` en móvil.
+ * Detección con `IntersectionObserver` y desconexión en cuanto entra en pantalla
+ * (equivalente a `once: true`); jamás un listener de scroll.
  *
- * Tres redes de seguridad, en capas:
- *   1. El CSS solo oculta si existe `html.js` (JavaScript está corriendo).
- *   2. El CSS no oculta nada si el usuario pidió menos movimiento.
- *   3. Si el observer no llega a disparar, un temporizador fuerza la
- *      visibilidad a los 3 s.
+ * La animación es una transición CSS sobre `transform` y `opacity`: corre fuera
+ * del hilo principal, es interrumpible y no arrastra ningún runtime de
+ * animación al bundle.
  *
- * En el peor de los casos el contenido se ve sin animación. Nunca desaparece.
+ * Tres redes para que el contenido nunca desaparezca:
+ *   1. el CSS solo oculta si existe `html.js`, es decir, si JavaScript corre;
+ *   2. `prefers-reduced-motion` anula transform y opacidad con `!important`;
+ *   3. si el observer no llegara a disparar, un temporizador muestra a los 3 s.
  */
 export default function Reveal({
   as: Component = "div",
-  delay = 0,
+  index = 0,
   className = "",
-  style,
   children,
   ...rest
 }) {
   const ref = useRef(null);
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return undefined;
-
-    const show = () => el.setAttribute("data-visible", "true");
+    const element = ref.current;
+    if (!element) return undefined;
 
     if (typeof IntersectionObserver === "undefined") {
-      show();
+      setIsVisible(true);
       return undefined;
     }
 
     const observer = new IntersectionObserver(
       (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            show();
-            observer.unobserve(entry.target);
-          }
+        if (entries[0]?.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
         }
       },
-      { rootMargin: "0px 0px -12% 0px", threshold: 0.01 },
+      { rootMargin: "0px 0px -10% 0px", threshold: 0 },
     );
 
-    observer.observe(el);
-    const failsafe = window.setTimeout(show, 3000);
+    observer.observe(element);
+    const failsafe = window.setTimeout(() => setIsVisible(true), 3000);
 
     return () => {
       observer.disconnect();
@@ -59,11 +57,16 @@ export default function Reveal({
     };
   }, []);
 
+  // Máximo 6 escalones: a partir de ahí el último elemento tardaría demasiado.
+  const delayMs = Math.min(index, MAX_STAGGER_STEPS - 1) * STAGGER_MS;
+
   return (
     <Component
       ref={ref}
+      data-reveal=""
+      data-visible={isVisible ? "true" : "false"}
+      style={delayMs > 0 ? { transitionDelay: `${delayMs}ms` } : undefined}
       className={`reveal ${className}`}
-      style={delay ? { ...style, "--reveal-delay": `${delay}ms` } : style}
       {...rest}
     >
       {children}
