@@ -1,11 +1,6 @@
 import { useTheme } from "../theme/ThemeProvider.jsx";
+import { useLanguage } from "../i18n/LanguageProvider.jsx";
 import { SunIcon, MoonIcon } from "./icons.jsx";
-import { content, DEFAULT_LANGUAGE } from "../data/content.js";
-
-// Task 3 introduces LanguageProvider / useLanguage(). Until then this reads
-// the default-language copy directly instead of inventing a placeholder
-// language context.
-const nav = content[DEFAULT_LANGUAGE].nav;
 
 // A true single-path sun<->moon morph needs two `d` strings with identical
 // segment structure, and animating `d` is neither `transform` nor `opacity`
@@ -14,7 +9,8 @@ const nav = content[DEFAULT_LANGUAGE].nav;
 // crossfades and rotates two separate icons — transform + opacity only.
 export default function ThemeToggle() {
   const { theme, toggle } = useTheme();
-  const label = theme === "dark" ? nav.themeLabelToLight : nav.themeLabelToDark;
+  const { t } = useLanguage();
+  const label = theme === "dark" ? t.nav.themeLabelToLight : t.nav.themeLabelToDark;
 
   return (
     <button
