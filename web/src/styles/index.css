@@ -45,6 +45,26 @@
   }
 }
 
+/* The visible state lives inside the @utility block on purpose. Declared in
+   @layer base it would lose to the utilities layer by layer order — not by
+   specificity — and the element would stay at opacity 0 forever. */
+@utility reveal {
+  opacity: 1;
+  translate: 0 0;
+
+  .js &:not([data-revealed]) {
+    opacity: 0;
+    translate: 0 1.5rem;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .js &:not([data-revealed]) {
+      opacity: 1;
+      translate: 0 0;
+    }
+  }
+}
+
 /* `inline` makes the generated utilities resolve `var(--bg)` at use time,
    so `bg-bg` follows the theme without regenerating any CSS. */
 @theme inline {
