@@ -2,10 +2,9 @@ import { Fragment, useLayoutEffect, useRef } from "react";
 import gsap from "gsap";
 import useReducedMotion from "../hooks/useReducedMotion.js";
 import { ENTRANCE_EASE } from "../lib/ease.js";
+import { wordStagger } from "../lib/stagger.js";
 
 const DURATION = 0.7;
-const STAGGER_STEP = 0.06;
-const MAX_STAGGER_STEPS = 6;
 
 // Splits `text` into per-word spans and animates them up into place on
 // mount. The space between words is emitted as a literal sibling text node
@@ -33,8 +32,6 @@ export default function SplitText({ text, as: Tag = "span", className = "" }) {
     if (!el) return;
 
     const spans = el.querySelectorAll("[data-word]");
-    const steps = Math.min(Math.max(spans.length - 1, 0), MAX_STAGGER_STEPS - 1);
-    const amount = steps * STAGGER_STEP;
 
     const tween = gsap.fromTo(
       spans,
@@ -44,7 +41,7 @@ export default function SplitText({ text, as: Tag = "span", className = "" }) {
         opacity: 1,
         duration: DURATION,
         ease: ENTRANCE_EASE,
-        stagger: { amount, from: "start" },
+        stagger: wordStagger,
       },
     );
 

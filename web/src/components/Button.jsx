@@ -17,7 +17,7 @@ export default function Button({ href, variant = "primary", className = "", chil
       <span aria-hidden className={`absolute inset-0 ${isGhost ? "bg-transparent" : "bg-surface-2"}`} />
       <span
         aria-hidden
-        className="absolute inset-0 origin-left scale-x-0 bg-accent transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-x-100"
+        className="absolute inset-0 origin-left scale-x-0 bg-accent transition-transform duration-[220ms] ease-entrance group-hover:scale-x-100"
       />
       <span className="relative">{children}</span>
     </a>
