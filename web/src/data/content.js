@@ -147,7 +147,6 @@ export const content = {
         "Me formé en el CFGS de Desarrollo de Aplicaciones Multiplataforma y completé el bootcamp full-stack de 4Geeks Academy. Sigo aprendiendo, sobre todo en el terreno de las herramientas de IA aplicadas al desarrollo.",
       ],
       resumeCta: "Descargar CV",
-      scenePlaceholder: "Escena 3D — próximamente",
     },
     contact: {
       eyebrow: "Contacto",
@@ -283,7 +282,6 @@ export const content = {
         "I hold a Higher Diploma in Cross-Platform Application Development and completed the 4Geeks Academy full-stack bootcamp. I keep learning, lately around AI tooling applied to development.",
       ],
       resumeCta: "Download résumé",
-      scenePlaceholder: "3D scene — coming soon",
     },
     contact: {
       eyebrow: "Contact",

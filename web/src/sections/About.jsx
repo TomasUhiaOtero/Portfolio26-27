@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { lazy, useEffect, useLayoutEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
@@ -8,8 +8,18 @@ import Chip from "../components/Chip.jsx";
 import { ENTRANCE_EASE } from "../lib/ease.js";
 import { wordStagger } from "../lib/stagger.js";
 import { progressToStage, paragraphProgress } from "./aboutScroll.js";
+import LazyCanvas from "../three/LazyCanvas.jsx";
 
 gsap.registerPlugin(ScrollTrigger);
+
+// Lazy, not a static import: see Hero.jsx's identical comment on
+// `HeroField` — a plain `import TechCore from "../three/TechCore.jsx"`
+// here would pull three/@react-three into this module's import graph
+// statically, and About.jsx is reachable from the app's entry point.
+// Wrapping the reference in `React.lazy` defers the `import()` to
+// LazyCanvas's own first render attempt, which it only makes once this
+// section nears the viewport.
+const TechCore = lazy(() => import("../three/TechCore.jsx"));
 
 // Matches Tailwind's default `lg` breakpoint. There is no Tailwind v4 JS
 // config to import this from (index.css's `@theme` block only defines
@@ -246,18 +256,20 @@ export default function About() {
           </div>
         </div>
 
-        {/* Right column: a self-contained slot. Task 9 replaces this whole
-            block with a <LazyCanvas> wrapping the real scene — the way
-            Hero.jsx's background layer was structured for Task 6 — so a
-            failure in that scene can never take the rest of this section
-            down with it. Decorative only (aria-hidden), matching the
-            contract LazyCanvas's own wrapper already holds, so the swap
-            changes nothing about this slot's accessibility semantics. */}
-        <div aria-hidden="true" className="relative">
-          <div className="flex aspect-[4/5] w-full items-center justify-center rounded-[28px] border border-line bg-surface-2 text-center text-sm text-mute lg:aspect-auto lg:h-full">
-            {t.about.scenePlaceholder}
-          </div>
-        </div>
+        {/* Right column: a self-contained slot. `LazyCanvas` owns its own
+            `aria-hidden`, so a failure inside `TechCore` can never take
+            the rest of this section down with it. The `aspect-[4/5]`
+            below `lg` and `lg:h-full` above it are the sizing Task 8's
+            review fixed on the placeholder this replaces — the parent
+            grid deliberately has no `items-center` (see the comment on it
+            above), because a centered grid item never gets a definite
+            height for `h-full` to resolve against. */}
+        <LazyCanvas
+          poster={{ dark: "/img/about-poster.webp", light: "/img/about-poster-light.webp" }}
+          className="relative aspect-[4/5] w-full overflow-hidden rounded-[28px] border border-line bg-surface-2 lg:aspect-auto lg:h-full"
+        >
+          <TechCore progressRef={progressRef} stage={stage} />
+        </LazyCanvas>
       </div>
     </section>
   );

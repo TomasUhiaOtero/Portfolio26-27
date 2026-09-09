@@ -48,14 +48,16 @@ describe("About", () => {
     expect(container.querySelector("section#sobre-mi")).toBeInTheDocument();
   });
 
-  it("renders the placeholder slot for Task 9's scene as decorative, labelled from data", () => {
+  it("renders the TechCore scene slot as a decorative LazyCanvas", () => {
     mockReducedMotion(true);
-    renderWithProviders(<About />);
-    const placeholder = screen.getByText(t.about.scenePlaceholder);
-    // Decorative only, matching the contract LazyCanvas's own wrapper
-    // holds (see About.jsx's comment on this block) — Task 9 swaps this
-    // slot for a <LazyCanvas> without changing its accessibility contract.
-    expect(placeholder.closest('[aria-hidden="true"]')).toBeInTheDocument();
+    const { container } = renderWithProviders(<About />);
+    // Under reduced motion LazyCanvas never mounts the real canvas (see
+    // LazyCanvas.jsx / adaptive.js's DISABLED_BUDGET) — it shows only the
+    // poster image, decorative and aria-hidden, matching the contract the
+    // placeholder this replaces already held.
+    const poster = container.querySelector('[aria-hidden="true"] img');
+    expect(poster).toBeInTheDocument();
+    expect(poster.closest('[aria-hidden="true"]')).toBeInTheDocument();
   });
 
   describe("under reduced motion", () => {
