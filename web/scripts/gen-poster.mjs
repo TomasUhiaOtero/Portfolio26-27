@@ -66,12 +66,82 @@
  *   ffmpeg -y -i public/img/hero-poster-light.png -c:v libwebp -quality 82 public/img/hero-poster-light.webp
  *   rm public/img/hero-poster-light.png
  *
- * Tasks 9, 11 and 15: reuse these two invocations verbatim as your
- * starting point, just changing `--out` (and, once you decide your own
- * scene's point count / link distance, those two flags too). Keep the
- * same two-pass tuning discipline: generate both themes, look at them
- * side by side, and adjust the light variant's alphas down until neither
- * reads louder than the other — don't assume the dark numbers transfer.
+ * Tasks 11 and 15: reuse the hero invocations above as your starting
+ * point if your scene is another scattered-particle-network look (Task
+ * 11's "ia" stage is explicitly described as wanting exactly that), just
+ * changing `--out` (and, once you decide your own scene's point count /
+ * link distance, those two flags too). Keep the same two-pass tuning
+ * discipline: generate both themes, look at them side by side, and adjust
+ * the light variant's alphas down until neither reads louder than the
+ * other — don't assume the dark numbers transfer.
+ *
+ * ---------------------------------------------------------------------
+ * Mode 2: `--mode core-orbit` (added for Task 9's fix round, ruling R25)
+ * ---------------------------------------------------------------------
+ *
+ * For a scene that is NOT a uniform scattered field but a distinct
+ * "central body with things orbiting it" (About's `TechCore`: a wireframe
+ * icosahedron core, instanced spheres orbiting it) — the `network` mode
+ * above cannot produce that shape no matter how its knobs are tuned,
+ * because it has no concept of a center. `--mode core-orbit` draws:
+ *
+ *   1. A faceted polygon at the canvas center (`--core-radius`,
+ *      `--core-facets` vertices) with its outer edges PLUS internal
+ *      chords (each vertex to the vertex `--core-chord-skip` steps
+ *      around) at `--core-line-alpha`, in `--accent` — a 2D suggestion of
+ *      a wireframe polyhedron, echoing the live scene's icosahedron
+ *      (whose material is also colored from `--accent`).
+ *   2. `--node-count` small dots scattered in a loose halo around that
+ *      core: angle uniform-random, radius sqrt-distributed between
+ *      `--orbit-radius-min` and `--orbit-radius-max` (area-uniform, not
+ *      radius-uniform, so they don't clump near the inner edge), then the
+ *      y-offset from center scaled by `--orbit-squash` (<1 flattens the
+ *      halo into an ellipse, suggesting the live scene's tilted/inclined
+ *      orbital rings rather than a flat circle face-on). Drawn in
+ *      `--glow` using the SAME `--dot-halo-*`/`--dot-core-*` flags
+ *      `network` mode uses for its points — one dot-rendering primitive,
+ *      shared across both modes.
+ *   3. The first `--orbit-line-count` of those dots (in scatter order,
+ *      itself seeded) get a faint straight line back to the core center
+ *      at `--orbit-line-alpha`, in `--glow` — a hint of orbital paths,
+ *      kept few and faint so it doesn't turn back into a dense network.
+ *
+ * Draw order is core wireframe, then the faint orbit-line hints, then the
+ * node dots on top — so the dots (the thing a viewer's eye should land
+ * on as "the orbiting things") are never occluded by the lines under
+ * them. The vignette (step 5 of `network` mode) applies identically in
+ * both modes, same flags, same per-theme caveat below.
+ *
+ * Usage — regenerate the two current About posters (run from `web/`):
+ *
+ *   node scripts/gen-poster.mjs --mode core-orbit \
+ *     --bg "#000000" --accent "#0a84ff" --glow "#5e5ce6" \
+ *     --width 1200 --height 1500 --seed 11 \
+ *     --core-radius 210 --core-facets 9 --core-chord-skip 3 --core-line-alpha 0.65 \
+ *     --node-count 26 --orbit-radius-min 260 --orbit-radius-max 440 --orbit-squash 0.5 \
+ *     --orbit-line-count 6 --orbit-line-alpha 0.16 \
+ *     --dot-halo-radius 9 --dot-halo-alpha 0.18 --dot-core-radius 2.8 --dot-core-alpha 0.85 \
+ *     --vignette-alpha 0.14 --vignette-start 0.85 \
+ *     --out public/img/about-poster.png
+ *   ffmpeg -y -i public/img/about-poster.png -c:v libwebp -quality 82 public/img/about-poster.webp
+ *   rm public/img/about-poster.png
+ *
+ *   node scripts/gen-poster.mjs --mode core-orbit \
+ *     --bg "#fbfbfd" --accent "#0071e3" --glow "#5856d6" \
+ *     --width 1200 --height 1500 --seed 11 \
+ *     --core-radius 210 --core-facets 9 --core-chord-skip 3 --core-line-alpha 0.4 \
+ *     --node-count 26 --orbit-radius-min 260 --orbit-radius-max 440 --orbit-squash 0.5 \
+ *     --orbit-line-count 6 --orbit-line-alpha 0.08 \
+ *     --dot-halo-radius 8 --dot-halo-alpha 0.09 --dot-core-radius 2.3 --dot-core-alpha 0.46 \
+ *     --vignette-alpha 0 --vignette-start 0.85 \
+ *     --out public/img/about-poster-light.png
+ *   ffmpeg -y -i public/img/about-poster-light.png -c:v libwebp -quality 82 public/img/about-poster-light.webp
+ *   rm public/img/about-poster-light.png
+ *
+ * Task 15: if your scene is likewise a distinct-focal-object shape (not a
+ * uniform field), reuse `core-orbit` rather than adding a third mode —
+ * check first whether either existing mode already fits before writing a
+ * new one.
  */
 
 import { deflateSync } from "node:zlib";
@@ -300,6 +370,106 @@ function generatePoster(options) {
   return canvas;
 }
 
+// Draws a regular `count`-vertex polygon centered at (cx, cy): its outer
+// edges plus internal chords (each vertex to the one `chordSkip` steps
+// around), which is what makes it read as a faceted wireframe solid rather
+// than a plain outlined shape. Chords are de-duplicated (an unordered pair
+// drawn once) so no segment gets double alpha from being hit from both
+// ends.
+function drawFacetedPolygon(canvas, cx, cy, radius, count, chordSkip, rgb, alpha) {
+  const vertices = [];
+  for (let i = 0; i < count; i += 1) {
+    const angle = (i / count) * Math.PI * 2 - Math.PI / 2;
+    vertices.push({ x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius });
+  }
+
+  const drawn = new Set();
+  const drawEdge = (i, j) => {
+    const key = i < j ? `${i}-${j}` : `${j}-${i}`;
+    if (drawn.has(key)) return;
+    drawn.add(key);
+    drawLine(canvas, vertices[i].x, vertices[i].y, vertices[j].x, vertices[j].y, rgb, alpha, 1.1);
+  };
+
+  for (let i = 0; i < count; i += 1) {
+    drawEdge(i, (i + 1) % count);
+    if (chordSkip > 1 && chordSkip < count - 1) {
+      drawEdge(i, (i + chordSkip) % count);
+    }
+  }
+}
+
+// Mode 2: a distinct central "core" with a loose halo of smaller "node"
+// dots orbiting it, a handful with faint lines hinting an orbital path
+// back to the core — see the docblock's "Mode 2" section for the full
+// rationale. Reuses `drawDot`/`drawLine`/`applyVignette`/`mulberry32` from
+// `network` mode; only the layout differs.
+function generateCoreOrbitPoster(options) {
+  const {
+    width,
+    height,
+    bg,
+    accent,
+    glow,
+    seed,
+    coreRadius,
+    coreFacets,
+    coreChordSkip,
+    coreLineAlpha,
+    nodeCount,
+    orbitRadiusMin,
+    orbitRadiusMax,
+    orbitSquash,
+    orbitLineCount,
+    orbitLineAlpha,
+    dotHaloRadius,
+    dotHaloAlpha,
+    dotCoreRadius,
+    dotCoreAlpha,
+    vignetteAlpha,
+    vignetteStart,
+    vignetteColor,
+  } = options;
+
+  const bgRgb = hexToRgb(bg);
+  const accentRgb = hexToRgb(accent);
+  const glowRgb = hexToRgb(glow);
+  const vignetteRgb = hexToRgb(vignetteColor);
+
+  const canvas = makeCanvas(width, height, bgRgb);
+  const rand = mulberry32(seed);
+  const cx = width / 2;
+  const cy = height / 2;
+
+  const nodes = [];
+  for (let i = 0; i < nodeCount; i += 1) {
+    const angle = rand() * Math.PI * 2;
+    // sqrt distribution: area-uniform across the annulus, so dots don't
+    // clump near the inner radius the way a plain linear lerp would.
+    const radius = orbitRadiusMin + (orbitRadiusMax - orbitRadiusMin) * Math.sqrt(rand());
+    nodes.push({
+      x: cx + Math.cos(angle) * radius,
+      y: cy + Math.sin(angle) * radius * orbitSquash,
+    });
+  }
+
+  drawFacetedPolygon(canvas, cx, cy, coreRadius, coreFacets, coreChordSkip, accentRgb, coreLineAlpha);
+
+  const lineCount = Math.min(orbitLineCount, nodes.length);
+  for (let i = 0; i < lineCount; i += 1) {
+    const node = nodes[i];
+    drawLine(canvas, node.x, node.y, cx, cy, glowRgb, orbitLineAlpha, 0.8);
+  }
+
+  for (const node of nodes) {
+    drawDot(canvas, node.x, node.y, glowRgb, dotHaloRadius, dotHaloAlpha, dotCoreRadius, dotCoreAlpha);
+  }
+
+  applyVignette(canvas, vignetteAlpha, vignetteStart, vignetteRgb);
+
+  return canvas;
+}
+
 // ---------------------------------------------------------------------------
 // Minimal PNG encoder — chunk framing + CRC32 + zlib deflate. No `canvas`
 // package is installed in this project and adding a dependency for a
@@ -375,17 +545,18 @@ function encodePng(canvas) {
 function main() {
   const args = parseArgs(process.argv.slice(2));
 
-  const options = {
+  const mode = requireString(args, "mode", "network");
+  if (mode !== "network" && mode !== "core-orbit") {
+    throw new Error(`--mode must be "network" or "core-orbit", got "${mode}"`);
+  }
+
+  const shared = {
     width: requireNumber(args, "width", 1600),
     height: requireNumber(args, "height", 1000),
     bg: requireString(args, "bg"),
     accent: requireString(args, "accent"),
     glow: requireString(args, "glow"),
-    points: requireNumber(args, "points", 200),
     seed: requireNumber(args, "seed", 6),
-    linkDistance: requireNumber(args, "link-distance", 68),
-    lineAlphaMin: requireNumber(args, "line-alpha-min", 0.16),
-    lineAlphaMax: requireNumber(args, "line-alpha-max", 0.55),
     dotHaloRadius: requireNumber(args, "dot-halo-radius", 10),
     dotHaloAlpha: requireNumber(args, "dot-halo-alpha", 0.25),
     dotCoreRadius: requireNumber(args, "dot-core-radius", 3.4),
@@ -396,11 +567,40 @@ function main() {
   };
 
   const out = requireString(args, "out");
+  let canvas;
+  let summary;
 
-  const canvas = generatePoster(options);
+  if (mode === "network") {
+    const options = {
+      ...shared,
+      points: requireNumber(args, "points", 200),
+      linkDistance: requireNumber(args, "link-distance", 68),
+      lineAlphaMin: requireNumber(args, "line-alpha-min", 0.16),
+      lineAlphaMax: requireNumber(args, "line-alpha-max", 0.55),
+    };
+    canvas = generatePoster(options);
+    summary = `${options.points} points, seed ${options.seed}`;
+  } else {
+    const options = {
+      ...shared,
+      coreRadius: requireNumber(args, "core-radius", 220),
+      coreFacets: requireNumber(args, "core-facets", 9),
+      coreChordSkip: requireNumber(args, "core-chord-skip", 3),
+      coreLineAlpha: requireNumber(args, "core-line-alpha", 0.5),
+      nodeCount: requireNumber(args, "node-count", 24),
+      orbitRadiusMin: requireNumber(args, "orbit-radius-min", 300),
+      orbitRadiusMax: requireNumber(args, "orbit-radius-max", 460),
+      orbitSquash: requireNumber(args, "orbit-squash", 0.55),
+      orbitLineCount: requireNumber(args, "orbit-line-count", 5),
+      orbitLineAlpha: requireNumber(args, "orbit-line-alpha", 0.1),
+    };
+    canvas = generateCoreOrbitPoster(options);
+    summary = `core-orbit, ${options.nodeCount} nodes, seed ${options.seed}`;
+  }
+
   const png = encodePng(canvas);
   writeFileSync(out, png);
-  console.log(`Wrote ${out} (${options.width}x${options.height}, ${options.points} points, seed ${options.seed})`);
+  console.log(`Wrote ${out} (${shared.width}x${shared.height}, ${summary})`);
 }
 
 main();
