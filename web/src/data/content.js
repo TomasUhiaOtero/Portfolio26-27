@@ -19,6 +19,7 @@ export const profile = {
   github: "https://github.com/TomasUhiaOtero",
   linkedin: "https://www.linkedin.com/in/tom%C3%A1s-uh%C3%ADa-otero-b10748345/",
   resume: "/TomasUhiaOteroResume.pdf",
+  heroPoster: "/img/hero-poster.webp",
 };
 
 export const content = {

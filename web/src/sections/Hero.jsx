@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { lazy, useRef } from "react";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
 import { profile } from "../data/content.js";
 import useReducedMotion from "../hooks/useReducedMotion.js";
@@ -7,11 +7,24 @@ import useIntroTimeline from "../hooks/useIntroTimeline.js";
 import SplitText from "../components/SplitText.jsx";
 import Counter from "../components/Counter.jsx";
 import Button from "../components/Button.jsx";
+import LazyCanvas from "../three/LazyCanvas.jsx";
+
+// Lazy, not a static import: `LazyCanvas` only mounts this once the hero
+// nears the viewport, but a plain `import HeroField from "../three/HeroField.jsx"`
+// here would still pull three/@react-three statically into this module's
+// import graph — and Hero.jsx is itself reachable from the app's entry
+// point, so that chunk would get fetched on initial load regardless of
+// when LazyCanvas actually renders it. Wrapping the reference in
+// `React.lazy` keeps the `import()` deferred to first render attempt,
+// which LazyCanvas doesn't make until the wrapper is actually near view.
+const HeroField = lazy(() => import("../three/HeroField.jsx"));
 
 /**
- * The hero. Ships with a CSS gradient background today — Task 6 swaps
- * only the background layer below for a `<LazyCanvas>` WebGL scene, so a
- * failure in that scene can never leave this section broken.
+ * The hero. Its background is a `<LazyCanvas>` WebGL particle field
+ * (Task 6); the veil below keeps the copy at AA contrast over any frame
+ * of that animation, and the poster LazyCanvas shows before the scene
+ * mounts (or in place of it, under reduced motion) is what keeps this
+ * section looking correct even if the 3D chunk never loads.
  */
 export default function Hero() {
   const { t } = useLanguage();
@@ -39,14 +52,18 @@ export default function Hero() {
       <div data-curtain className="fixed inset-0 z-50 bg-bg" />
 
       {/* Background layer: its own absolutely-positioned stack, painted
-          onto nothing else, so Task 6 can swap it wholesale for a
-          <LazyCanvas> without touching anything below. */}
-      <div aria-hidden="true" className="absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-surface via-bg to-bg" />
-        <div className="absolute left-1/2 top-1/4 h-[60vmax] w-[60vmax] -translate-x-1/2 -translate-y-1/2 bg-accent/20 blur-[120px]" />
-      </div>
-      {/* Veil: keeps the copy at AA contrast whether the layer above is
-          this CSS gradient or the animated scene that replaces it. */}
+          onto nothing else. Renders the poster until the hero nears the
+          viewport, then lazily mounts the particle field; unmounts it
+          again once scrolled far enough away. */}
+      <LazyCanvas
+        poster={profile.heroPoster}
+        rootMargin="200px"
+        className="absolute inset-0 -z-10 overflow-hidden"
+      >
+        <HeroField />
+      </LazyCanvas>
+      {/* Veil: keeps the copy at AA contrast over any frame of the layer
+          above, whether that's the static poster or the animated scene. */}
       <div
         aria-hidden="true"
         className="absolute inset-0 -z-10 bg-gradient-to-b from-transparent to-bg"
