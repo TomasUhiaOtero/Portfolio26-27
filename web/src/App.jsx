@@ -2,6 +2,7 @@ import { ThemeProvider } from "./theme/ThemeProvider.jsx";
 import { LanguageProvider } from "./i18n/LanguageProvider.jsx";
 import SideRail from "./components/SideRail.jsx";
 import Hero from "./sections/Hero.jsx";
+import About from "./sections/About.jsx";
 import useLenis from "./hooks/useLenis.js";
 
 function AppShell() {
@@ -13,6 +14,7 @@ function AppShell() {
     <main className="relative min-h-dvh bg-bg text-text">
       <SideRail />
       <Hero />
+      <About />
     </main>
   );
 }
