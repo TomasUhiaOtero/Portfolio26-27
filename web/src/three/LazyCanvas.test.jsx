@@ -46,18 +46,35 @@ const LazyScene = lazy(() => new Promise(() => {}));
 
 let warnSpy;
 
+// The real `console.warn`, captured before any test replaces it — used
+// below so the mock can silence *only* the one expected message instead
+// of every warning any of these tests might produce.
+const realConsoleWarn = console.warn;
+
+// The dev-only lazy-children check (finding 3, R20) warns whenever
+// `children` isn't wrapped in React.lazy() — true for every plain `<div>`
+// stand-in most of these tests use for "scene" on purpose, to keep them
+// focused on mount/unmount timing rather than on satisfying that
+// contract. A file-wide mock is still the least disruptive way to keep
+// that expected noise out of the suite's output (R19's fix pass tried a
+// blanket silence here, which the R20 re-review flagged: it would also
+// swallow a genuine, unrelated React warning from any of the other nine
+// tests without anyone noticing). So this mock passes every call through
+// to the real `console.warn` except the one specific message the dev-only
+// check emits — an unrelated warning still reaches stderr and fails the
+// "pristine output" bar this suite is held to, exactly as it would
+// without any mock at all.
+const LAZY_CHILDREN_WARNING = /React\.lazy/;
+
 beforeEach(() => {
   observers = [];
   window.IntersectionObserver = MockIntersectionObserver;
   localStorage.clear();
   delete document.documentElement.dataset.theme;
-  // The dev-only lazy-children check (finding 3) warns whenever `children`
-  // isn't wrapped in React.lazy() — true for every plain `<div>` stand-in
-  // most of these tests use for "scene" on purpose, to keep them focused
-  // on mount/unmount timing. Silencing it here keeps that noise out of
-  // the suite's output; the dedicated describe block below asserts on it
-  // directly instead.
-  warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  warnSpy = vi.spyOn(console, "warn").mockImplementation((message, ...args) => {
+    if (typeof message === "string" && LAZY_CHILDREN_WARNING.test(message)) return;
+    realConsoleWarn(message, ...args);
+  });
 });
 
 afterEach(() => {

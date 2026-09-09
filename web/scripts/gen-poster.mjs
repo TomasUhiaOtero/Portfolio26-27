@@ -1,0 +1,396 @@
+#!/usr/bin/env node
+/**
+ * Generates a still "poster" frame for one of the site's WebGL particle
+ * scenes (see `src/three/HeroField.jsx` and `src/three/LazyCanvas.jsx`).
+ * `LazyCanvas` shows this image until the real scene is in view, and shows
+ * it permanently under reduced motion — so it has to read as a genuine
+ * frame of the particle network, not a placeholder, in both themes.
+ *
+ * This script is deliberately NOT reachable from `src/`: it is a one-off
+ * Node build tool, not application code, and must never enter the bundle.
+ * It is plain Node (no `canvas` package, no other new dependency) — a
+ * tiny hand-rolled PNG encoder plus `ffmpeg` for the final WebP encode.
+ *
+ * Algorithm (matches the live scene's spirit: a scatter of points, thin
+ * lines joining nearby pairs, faint dots on top, a soft vignette):
+ *   1. Fill the frame with `--bg`.
+ *   2. Scatter `--points` points using a seeded PRNG (`--seed`), so the
+ *      same invocation always produces the same image.
+ *   3. For every pair of points closer than `--link-distance`, draw a
+ *      `--glow` line, antialiased by distance-to-segment, at an alpha that
+ *      fades from `--line-alpha-max` (touching) down to `--line-alpha-min`
+ *      (right at the threshold) — closer pairs read as stronger links.
+ *   4. Draw each point as an `--accent` dot: a soft outer halo
+ *      (`--dot-halo-radius`, `--dot-halo-alpha`, quadratic falloff) plus a
+ *      sharper core (`--dot-core-radius`, `--dot-core-alpha`).
+ *   5. Blend a soft elliptical vignette over the top `--vignette-alpha` of
+ *      the frame (past `--vignette-start` of the way to the edge, dx/dy
+ *      normalised independently by half-width/half-height so a non-square
+ *      canvas doesn't turn it into an off-centre "spotlight").
+ *
+ * Dark and light need DIFFERENT alpha values, not the same ones: dark
+ * marks on a light ground read considerably stronger than light marks on
+ * a dark ground at identical alpha (dark grounds give contrast almost for
+ * free). The invocations below were tuned so the two posters sit at
+ * comparable visual weight — see task-6-report.md's third fix section for
+ * the side-by-side comparison that produced these numbers. Re-run both
+ * whenever `--accent`/`--glow`/`--bg` change in `src/styles/index.css`.
+ *
+ * Usage — regenerate the two current hero posters (run from `web/`):
+ *
+ *   node scripts/gen-poster.mjs --bg "#000000" --accent "#0a84ff" --glow "#5e5ce6" \
+ *     --points 200 --seed 6 --link-distance 68 \
+ *     --line-alpha-min 0.06 --line-alpha-max 0.26 \
+ *     --dot-halo-radius 7 --dot-halo-alpha 0.15 --dot-core-radius 2.2 --dot-core-alpha 0.75 \
+ *     --vignette-alpha 0.14 --vignette-start 0.85 \
+ *     --out public/img/hero-poster.png
+ *   ffmpeg -y -i public/img/hero-poster.png -c:v libwebp -quality 82 public/img/hero-poster.webp
+ *   rm public/img/hero-poster.png
+ *
+ *   node scripts/gen-poster.mjs --bg "#fbfbfd" --accent "#0071e3" --glow "#5856d6" \
+ *     --points 200 --seed 6 --link-distance 68 \
+ *     --line-alpha-min 0.03 --line-alpha-max 0.13 \
+ *     --dot-halo-radius 6 --dot-halo-alpha 0.08 --dot-core-radius 2 --dot-core-alpha 0.4 \
+ *     --vignette-alpha 0.06 --vignette-start 0.85 \
+ *     --out public/img/hero-poster-light.png
+ *   ffmpeg -y -i public/img/hero-poster-light.png -c:v libwebp -quality 82 public/img/hero-poster-light.webp
+ *   rm public/img/hero-poster-light.png
+ *
+ * Tasks 9, 11 and 15: reuse these two invocations verbatim as your
+ * starting point, just changing `--out` (and, once you decide your own
+ * scene's point count / link distance, those two flags too). Keep the
+ * same two-pass tuning discipline: generate both themes, look at them
+ * side by side, and adjust the light variant's alphas down until neither
+ * reads louder than the other — don't assume the dark numbers transfer.
+ */
+
+import { deflateSync } from "node:zlib";
+import { writeFileSync } from "node:fs";
+
+// ---------------------------------------------------------------------------
+// CLI parsing
+// ---------------------------------------------------------------------------
+
+function parseArgs(argv) {
+  const args = {};
+  for (let i = 0; i < argv.length; i += 1) {
+    const token = argv[i];
+    if (!token.startsWith("--")) continue;
+    const key = token.slice(2);
+    const value = argv[i + 1];
+    args[key] = value;
+    i += 1;
+  }
+  return args;
+}
+
+function requireNumber(args, key, fallback) {
+  const raw = args[key];
+  if (raw === undefined) {
+    if (fallback === undefined) throw new Error(`Missing required --${key}`);
+    return fallback;
+  }
+  const value = Number(raw);
+  if (Number.isNaN(value)) throw new Error(`--${key} must be a number, got "${raw}"`);
+  return value;
+}
+
+function requireString(args, key, fallback) {
+  const raw = args[key];
+  if (raw === undefined) {
+    if (fallback === undefined) throw new Error(`Missing required --${key}`);
+    return fallback;
+  }
+  return raw;
+}
+
+function hexToRgb(hex) {
+  const normalized = hex.replace("#", "");
+  const value = parseInt(
+    normalized.length === 3
+      ? normalized
+          .split("")
+          .map((ch) => ch + ch)
+          .join("")
+      : normalized,
+    16,
+  );
+  return [(value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff];
+}
+
+// ---------------------------------------------------------------------------
+// Deterministic PRNG (mulberry32) — same seed always produces the same
+// scatter, so the exact same invocation is reproducible byte-for-byte.
+// ---------------------------------------------------------------------------
+
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function next() {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Rendering
+// ---------------------------------------------------------------------------
+
+function makeCanvas(width, height, bgRgb) {
+  const pixels = new Float64Array(width * height * 3);
+  for (let i = 0; i < width * height; i += 1) {
+    pixels[i * 3] = bgRgb[0];
+    pixels[i * 3 + 1] = bgRgb[1];
+    pixels[i * 3 + 2] = bgRgb[2];
+  }
+  return { width, height, pixels };
+}
+
+function blendPixel(canvas, x, y, rgb, alpha) {
+  if (alpha <= 0) return;
+  if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) return;
+  const i = (y * canvas.width + x) * 3;
+  const a = Math.min(1, alpha);
+  canvas.pixels[i] = rgb[0] * a + canvas.pixels[i] * (1 - a);
+  canvas.pixels[i + 1] = rgb[1] * a + canvas.pixels[i + 1] * (1 - a);
+  canvas.pixels[i + 2] = rgb[2] * a + canvas.pixels[i + 2] * (1 - a);
+}
+
+// Perpendicular distance from (px, py) to the segment (x1,y1)-(x2,y2),
+// clamped to the segment's endpoints (not the infinite line through it).
+function distanceToSegment(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const lengthSq = dx * dx + dy * dy;
+  let t = lengthSq === 0 ? 0 : ((px - x1) * dx + (py - y1) * dy) / lengthSq;
+  t = Math.max(0, Math.min(1, t));
+  const cx = x1 + t * dx;
+  const cy = y1 + t * dy;
+  return Math.hypot(px - cx, py - cy);
+}
+
+function drawLine(canvas, x1, y1, x2, y2, rgb, alpha, strokeHalfWidth) {
+  const minX = Math.max(0, Math.floor(Math.min(x1, x2) - strokeHalfWidth - 1));
+  const maxX = Math.min(canvas.width - 1, Math.ceil(Math.max(x1, x2) + strokeHalfWidth + 1));
+  const minY = Math.max(0, Math.floor(Math.min(y1, y2) - strokeHalfWidth - 1));
+  const maxY = Math.min(canvas.height - 1, Math.ceil(Math.max(y1, y2) + strokeHalfWidth + 1));
+
+  for (let y = minY; y <= maxY; y += 1) {
+    for (let x = minX; x <= maxX; x += 1) {
+      const d = distanceToSegment(x + 0.5, y + 0.5, x1, y1, x2, y2);
+      if (d > strokeHalfWidth) continue;
+      const coverage = 1 - d / strokeHalfWidth;
+      blendPixel(canvas, x, y, rgb, alpha * coverage);
+    }
+  }
+}
+
+function drawDot(canvas, cx, cy, rgb, haloRadius, haloAlpha, coreRadius, coreAlpha) {
+  const radius = Math.max(haloRadius, coreRadius) + 1;
+  const minX = Math.max(0, Math.floor(cx - radius));
+  const maxX = Math.min(canvas.width - 1, Math.ceil(cx + radius));
+  const minY = Math.max(0, Math.floor(cy - radius));
+  const maxY = Math.min(canvas.height - 1, Math.ceil(cy + radius));
+
+  for (let y = minY; y <= maxY; y += 1) {
+    for (let x = minX; x <= maxX; x += 1) {
+      const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
+      if (d <= haloRadius) {
+        const t = 1 - d / haloRadius;
+        blendPixel(canvas, x, y, rgb, haloAlpha * t * t);
+      }
+      if (d <= coreRadius + 1) {
+        const edge = Math.min(1, Math.max(0, coreRadius + 1 - d));
+        blendPixel(canvas, x, y, rgb, coreAlpha * edge);
+      }
+    }
+  }
+}
+
+function applyVignette(canvas, alphaMax, start, colorRgb) {
+  const halfW = canvas.width / 2;
+  const halfH = canvas.height / 2;
+  for (let y = 0; y < canvas.height; y += 1) {
+    const ny = (y + 0.5 - halfH) / halfH;
+    for (let x = 0; x < canvas.width; x += 1) {
+      const nx = (x + 0.5 - halfW) / halfW;
+      const d = Math.hypot(nx, ny);
+      if (d <= start) continue;
+      // Quadratic ease-in: a linear ramp over such a narrow band (edge to
+      // 1.0 in normalised space) reads as a hard ring rather than a soft
+      // vignette; squaring it keeps the darkening negligible just past
+      // `start` and lets it build toward `alphaMax` only right at the rim.
+      const t = Math.min(1, (d - start) / (1 - start));
+      blendPixel(canvas, x, y, colorRgb, alphaMax * t * t);
+    }
+  }
+}
+
+function generatePoster(options) {
+  const {
+    width,
+    height,
+    bg,
+    accent,
+    glow,
+    points,
+    seed,
+    linkDistance,
+    lineAlphaMin,
+    lineAlphaMax,
+    dotHaloRadius,
+    dotHaloAlpha,
+    dotCoreRadius,
+    dotCoreAlpha,
+    vignetteAlpha,
+    vignetteStart,
+    vignetteColor,
+  } = options;
+
+  const bgRgb = hexToRgb(bg);
+  const accentRgb = hexToRgb(accent);
+  const glowRgb = hexToRgb(glow);
+  const vignetteRgb = hexToRgb(vignetteColor);
+
+  const canvas = makeCanvas(width, height, bgRgb);
+  const rand = mulberry32(seed);
+
+  const scatter = [];
+  const margin = 24;
+  for (let i = 0; i < points; i += 1) {
+    scatter.push({
+      x: margin + rand() * (width - margin * 2),
+      y: margin + rand() * (height - margin * 2),
+    });
+  }
+
+  const linkDistanceSq = linkDistance * linkDistance;
+  for (let i = 0; i < scatter.length; i += 1) {
+    for (let j = i + 1; j < scatter.length; j += 1) {
+      const a = scatter[i];
+      const b = scatter[j];
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      const distSq = dx * dx + dy * dy;
+      if (distSq > linkDistanceSq) continue;
+      const dist = Math.sqrt(distSq);
+      const alpha = lineAlphaMax - (lineAlphaMax - lineAlphaMin) * (dist / linkDistance);
+      drawLine(canvas, a.x, a.y, b.x, b.y, glowRgb, alpha, 0.9);
+    }
+  }
+
+  for (const p of scatter) {
+    drawDot(canvas, p.x, p.y, accentRgb, dotHaloRadius, dotHaloAlpha, dotCoreRadius, dotCoreAlpha);
+  }
+
+  applyVignette(canvas, vignetteAlpha, vignetteStart, vignetteRgb);
+
+  return canvas;
+}
+
+// ---------------------------------------------------------------------------
+// Minimal PNG encoder — chunk framing + CRC32 + zlib deflate. No `canvas`
+// package is installed in this project and adding a dependency for a
+// one-off asset script isn't warranted; Node's built-in `zlib` is enough.
+// ---------------------------------------------------------------------------
+
+const CRC_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let n = 0; n < 256; n += 1) {
+    let c = n;
+    for (let k = 0; k < 8; k += 1) {
+      c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    }
+    table[n] = c >>> 0;
+  }
+  return table;
+})();
+
+function crc32(buf) {
+  let c = 0xffffffff;
+  for (let i = 0; i < buf.length; i += 1) {
+    c = CRC_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
+  }
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+function chunk(type, data) {
+  const typeBuf = Buffer.from(type, "ascii");
+  const lengthBuf = Buffer.alloc(4);
+  lengthBuf.writeUInt32BE(data.length, 0);
+  const crcBuf = Buffer.alloc(4);
+  crcBuf.writeUInt32BE(crc32(Buffer.concat([typeBuf, data])), 0);
+  return Buffer.concat([lengthBuf, typeBuf, data, crcBuf]);
+}
+
+function encodePng(canvas) {
+  const { width, height, pixels } = canvas;
+  const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+
+  const ihdrData = Buffer.alloc(13);
+  ihdrData.writeUInt32BE(width, 0);
+  ihdrData.writeUInt32BE(height, 4);
+  ihdrData[8] = 8; // bit depth
+  ihdrData[9] = 2; // color type: RGB
+  ihdrData[10] = 0; // compression
+  ihdrData[11] = 0; // filter
+  ihdrData[12] = 0; // interlace
+  const ihdr = chunk("IHDR", ihdrData);
+
+  const stride = width * 3;
+  const raw = Buffer.alloc((stride + 1) * height);
+  for (let y = 0; y < height; y += 1) {
+    const rowStart = y * (stride + 1);
+    raw[rowStart] = 0; // filter type: none
+    for (let x = 0; x < width; x += 1) {
+      const i = (y * width + x) * 3;
+      const o = rowStart + 1 + x * 3;
+      raw[o] = Math.round(Math.max(0, Math.min(255, pixels[i])));
+      raw[o + 1] = Math.round(Math.max(0, Math.min(255, pixels[i + 1])));
+      raw[o + 2] = Math.round(Math.max(0, Math.min(255, pixels[i + 2])));
+    }
+  }
+  const idat = chunk("IDAT", deflateSync(raw, { level: 9 }));
+  const iend = chunk("IEND", Buffer.alloc(0));
+
+  return Buffer.concat([signature, ihdr, idat, iend]);
+}
+
+// ---------------------------------------------------------------------------
+// Entry point
+// ---------------------------------------------------------------------------
+
+function main() {
+  const args = parseArgs(process.argv.slice(2));
+
+  const options = {
+    width: requireNumber(args, "width", 1600),
+    height: requireNumber(args, "height", 1000),
+    bg: requireString(args, "bg"),
+    accent: requireString(args, "accent"),
+    glow: requireString(args, "glow"),
+    points: requireNumber(args, "points", 200),
+    seed: requireNumber(args, "seed", 6),
+    linkDistance: requireNumber(args, "link-distance", 68),
+    lineAlphaMin: requireNumber(args, "line-alpha-min", 0.16),
+    lineAlphaMax: requireNumber(args, "line-alpha-max", 0.55),
+    dotHaloRadius: requireNumber(args, "dot-halo-radius", 10),
+    dotHaloAlpha: requireNumber(args, "dot-halo-alpha", 0.25),
+    dotCoreRadius: requireNumber(args, "dot-core-radius", 3.4),
+    dotCoreAlpha: requireNumber(args, "dot-core-alpha", 0.9),
+    vignetteAlpha: requireNumber(args, "vignette-alpha", 0.14),
+    vignetteStart: requireNumber(args, "vignette-start", 0.8),
+    vignetteColor: requireString(args, "vignette-color", "#000000"),
+  };
+
+  const out = requireString(args, "out");
+
+  const canvas = generatePoster(options);
+  const png = encodePng(canvas);
+  writeFileSync(out, png);
+  console.log(`Wrote ${out} (${options.width}x${options.height}, ${options.points} points, seed ${options.seed})`);
+}
+
+main();
