@@ -32,6 +32,7 @@ export const content = {
     htmlLang: "es",
     nav: {
       brandAria: "Tomás Uhía — inicio",
+      railLabel: "Navegación de secciones",
       links: [
         { id: "inicio", label: "Inicio" },
         { id: "sobre-mi", label: "Sobre mí" },
@@ -170,6 +171,7 @@ export const content = {
     htmlLang: "en",
     nav: {
       brandAria: "Tomás Uhía — home",
+      railLabel: "Section navigation",
       links: [
         { id: "inicio", label: "Home" },
         { id: "sobre-mi", label: "About" },

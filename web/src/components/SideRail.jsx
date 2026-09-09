@@ -74,6 +74,7 @@ export default function SideRail() {
   return (
     <nav
       ref={navRef}
+      aria-label={t.nav.railLabel}
       onMouseEnter={expand}
       onMouseLeave={collapse}
       onFocus={expand}
