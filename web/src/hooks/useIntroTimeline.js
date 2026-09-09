@@ -40,10 +40,19 @@ export default function useIntroTimeline(rootRef, { enabled = true } = {}) {
       // to its resting state.
       const ctx = gsap.context(() => {
         gsap.set(CURTAIN, { autoAlpha: 0 });
-        gsap.set([EYEBROW, SUB, CTA, STATS, CUE], {
+        // WORD is included here even though it uses `yPercent` (not `y`)
+        // for its offset: with `SplitText` rendering `animate={false}`, it
+        // sets up no reduced-motion handling of its own any more, so this
+        // is the only place `[data-word]` ever gets reset to its resting
+        // state when the master timeline is skipped. Omitting it would
+        // leave the headline stuck at `opacity: 0` under reduced motion —
+        // permanently invisible, the exact failure mode this project has
+        // already shipped once.
+        gsap.set([EYEBROW, WORD, SUB, CTA, STATS, CUE], {
           opacity: 1,
           x: 0,
           y: 0,
+          yPercent: 0,
           scale: 1,
         });
       }, root);

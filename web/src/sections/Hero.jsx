@@ -63,6 +63,7 @@ export default function Hero() {
         <SplitText
           as="h1"
           text={t.hero.headline}
+          animate={false}
           className="mt-6 text-[clamp(3rem,9vw,8rem)] font-semibold leading-[0.95] tracking-[-0.045em] text-text"
         />
 

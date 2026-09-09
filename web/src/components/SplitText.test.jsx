@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { render } from "@testing-library/react";
 import SplitText from "./SplitText.jsx";
+import gsap from "gsap";
 import { wordStagger } from "../lib/stagger.js";
 
 // gsap.fromTo is mocked out for these tests. Real GSAP, when it measures a
@@ -24,7 +25,28 @@ vi.mock("gsap", () => ({
   },
 }));
 
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
 describe("SplitText", () => {
+  it("makes no GSAP call when animate is false, but still renders the words", () => {
+    // Task 5 review finding: SplitText's own tween and the hero's master
+    // timeline both targeted [data-word], so the master timeline's
+    // `fromTo` snapped the already-revealed headline back to hidden and
+    // replayed it. `animate={false}` must give up ownership entirely —
+    // no `gsap` call of any kind — while still rendering the words for
+    // that other timeline to target.
+    const text = "Uno dos tres";
+    const { container } = render(<SplitText text={text} animate={false} />);
+
+    expect(gsap.fromTo).not.toHaveBeenCalled();
+
+    const words = container.querySelectorAll("[data-word]");
+    expect(words).toHaveLength(3);
+    expect(container.textContent).toBe(text);
+  });
+
   it("keeps spaces out of every [data-word] span but preserves them in the rendered text", () => {
     // Nine words — long enough to exercise the stagger cap and to prove the
     // headline still reads back with spaces intact.
