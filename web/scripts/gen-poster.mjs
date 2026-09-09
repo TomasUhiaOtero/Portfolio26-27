@@ -116,7 +116,7 @@
  *
  *   node scripts/gen-poster.mjs --mode core-orbit \
  *     --bg "#000000" --accent "#0a84ff" --glow "#5e5ce6" \
- *     --width 1200 --height 1500 --seed 11 \
+ *     --width 1200 --height 1500 --seed 33 \
  *     --core-radius 210 --core-facets 9 --core-chord-skip 3 --core-line-alpha 0.65 \
  *     --node-count 26 --orbit-radius-min 260 --orbit-radius-max 440 --orbit-squash 0.5 \
  *     --orbit-line-count 6 --orbit-line-alpha 0.16 \
@@ -128,7 +128,7 @@
  *
  *   node scripts/gen-poster.mjs --mode core-orbit \
  *     --bg "#fbfbfd" --accent "#0071e3" --glow "#5856d6" \
- *     --width 1200 --height 1500 --seed 11 \
+ *     --width 1200 --height 1500 --seed 33 \
  *     --core-radius 210 --core-facets 9 --core-chord-skip 3 --core-line-alpha 0.4 \
  *     --node-count 26 --orbit-radius-min 260 --orbit-radius-max 440 --orbit-squash 0.5 \
  *     --orbit-line-count 6 --orbit-line-alpha 0.08 \
