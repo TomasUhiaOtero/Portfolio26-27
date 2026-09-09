@@ -1,34 +1,24 @@
 import { ThemeProvider } from "./theme/ThemeProvider.jsx";
-import { LanguageProvider, useLanguage } from "./i18n/LanguageProvider.jsx";
+import { LanguageProvider } from "./i18n/LanguageProvider.jsx";
 import ThemeToggle from "./components/ThemeToggle.jsx";
 import LangToggle from "./components/LangToggle.jsx";
-import Reveal from "./components/Reveal.jsx";
+import Hero from "./sections/Hero.jsx";
 import useLenis from "./hooks/useLenis.js";
 
 function AppShell() {
-  const { t } = useLanguage();
   // Called once, here — later tasks reach the instance via `getLenis()`
   // instead of prop-drilling it through the tree.
   useLenis();
 
   return (
-    <main className="min-h-dvh bg-bg text-text">
-      <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-6">
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
-          <LangToggle />
-        </div>
+    <main className="relative min-h-dvh bg-bg text-text">
+      {/* Placeholder header — Task 7 replaces this with the side rail nav
+          that these two controls will move into. */}
+      <div className="absolute inset-x-0 top-0 z-40 mx-auto flex max-w-[1400px] items-center justify-end gap-3 px-6 py-6 sm:px-10">
+        <ThemeToggle />
+        <LangToggle />
       </div>
-      <div className="mx-auto max-w-3xl px-6 pb-16">
-        <h1 className="text-3xl font-semibold text-text">{t.hero.headline}</h1>
-        <p className="mt-3 text-mute">{t.hero.subheadline}</p>
-        <Reveal className="mt-6 rounded-2xl border border-line bg-surface p-6 shadow-sm dark:shadow-none">
-          <div className="flex items-center gap-2 rounded-xl bg-surface-2 p-4">
-            <span aria-hidden="true" className="size-2 rounded-full bg-accent" />
-            <span className="text-accent">{t.hero.primaryCta}</span>
-          </div>
-        </Reveal>
-      </div>
+      <Hero />
     </main>
   );
 }

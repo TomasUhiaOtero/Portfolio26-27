@@ -43,6 +43,27 @@
     outline: 2px solid var(--accent);
     outline-offset: 3px;
   }
+
+  /* The hero's entrance timeline (useIntroTimeline) hides the curtain and
+     reveals several elements via GSAP, driven from JS. If the bundle
+     never executes, `<html>` never gets the `js` class main.jsx adds on
+     startup, so these two rules are the fallback: drop the curtain
+     entirely and force every element it would have revealed back to
+     opacity 1, so a failed bundle leaves a readable hero instead of a
+     blank one.
+     `.js-hidden`'s `!important` is load-bearing: `opacity-0` lives in
+     Tailwind's `utilities` layer, which always outranks `@layer base`
+     regardless of selector specificity — only `!important` can win
+     across that layer boundary here (per the CSS cascade, `!important`
+     compares in reverse layer order and beats any non-important rule in
+     any layer). */
+  html:not(.js) [data-curtain] {
+    display: none;
+  }
+
+  html:not(.js) .js-hidden {
+    opacity: 1 !important;
+  }
 }
 
 /* The visible state lives inside the @utility block on purpose. Declared in
