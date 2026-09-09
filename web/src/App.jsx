@@ -5,6 +5,7 @@ import Hero from "./sections/Hero.jsx";
 import About from "./sections/About.jsx";
 import Services from "./sections/Services.jsx";
 import Experience from "./sections/Experience.jsx";
+import Work from "./sections/Work.jsx";
 import useLenis from "./hooks/useLenis.js";
 
 function AppShell() {
@@ -19,6 +20,7 @@ function AppShell() {
       <About />
       <Services />
       <Experience />
+      <Work />
     </main>
   );
 }
