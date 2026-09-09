@@ -36,6 +36,16 @@
  * the side-by-side comparison that produced these numbers. Re-run both
  * whenever `--accent`/`--glow`/`--bg` change in `src/styles/index.css`.
  *
+ * The vignette needs a DIFFERENT treatment per theme too, not just a
+ * smaller alpha: it blends `--vignette-color` (default black) toward the
+ * frame edges, and black-over-near-white at any noticeable alpha reads as
+ * a crisp grey ellipse — a spotlight, not a background — while the same
+ * black-over-black vignette on the dark poster is invisible. The light
+ * poster therefore ships with `--vignette-alpha 0` (no vignette at all);
+ * see task-6-report.md's fourth fix section. The dark poster keeps its
+ * vignette — it does no harm there and the two posters are correctly
+ * weight-matched without touching it.
+ *
  * Usage — regenerate the two current hero posters (run from `web/`):
  *
  *   node scripts/gen-poster.mjs --bg "#000000" --accent "#0a84ff" --glow "#5e5ce6" \
@@ -51,7 +61,7 @@
  *     --points 200 --seed 6 --link-distance 68 \
  *     --line-alpha-min 0.03 --line-alpha-max 0.13 \
  *     --dot-halo-radius 6 --dot-halo-alpha 0.08 --dot-core-radius 2 --dot-core-alpha 0.4 \
- *     --vignette-alpha 0.06 --vignette-start 0.85 \
+ *     --vignette-alpha 0 --vignette-start 0.85 \
  *     --out public/img/hero-poster-light.png
  *   ffmpeg -y -i public/img/hero-poster-light.png -c:v libwebp -quality 82 public/img/hero-poster-light.webp
  *   rm public/img/hero-poster-light.png
