@@ -10,6 +10,7 @@ import {
   startColorTransition,
   tickColorTransition,
 } from "./colorTransition.js";
+import { findNeighbourPairs, nextFramePairParity, isNeighbourRebuildFrame } from "./neighbourLines.js";
 
 // World-space bounds of the particle slab. Kept small and shallow relative
 // to the camera below so the field reads as a coherent plane of depth
@@ -117,11 +118,9 @@ export default function HeroField() {
   // render/commit cycle. Mutating buffer attributes and material colours
   // in place every frame — rather than reallocating and diffing through
   // React — is the standard three.js/r3f performance pattern, and is
-  // exactly what the squared-distance neighbour rebuild below needs to
-  // stay cheap at 260 points. The new react-hooks/immutability rule can't
-  // tell `useFrame` apart from a render-phase hook, so it flags these
-  // writes as if they mutated render output; they don't.
-  /* eslint-disable react-hooks/immutability */
+  // exactly what the squared-distance neighbour rebuild needs to stay
+  // cheap at 260 points (the mutation itself lives in
+  // `findNeighbourPairs`, in neighbourLines.js, where it's unit-tested).
   useFrame(() => {
     // Pointer parallax: lerp toward the target each frame rather than
     // snapping to it, so the tilt trails the cursor instead of sticking
@@ -141,41 +140,25 @@ export default function HeroField() {
     if (lineMaterialRef.current) lineMaterialRef.current.color.copy(lineColor);
 
     // Rebuilding the neighbour graph is the frame budget: compare squared
-    // distances (skip the sqrt) and only do it every other frame.
-    frameParityRef.current = (frameParityRef.current + 1) % 2;
-    if (frameParityRef.current !== 0) return;
+    // distances (skip the sqrt) and only do it every other frame. Both
+    // properties live in neighbourLines.js, where they're unit-tested.
+    frameParityRef.current = nextFramePairParity(frameParityRef.current);
+    if (!isNeighbourRebuildFrame(frameParityRef.current)) return;
 
     const geometry = lineGeometryRef.current;
     if (!geometry) return;
 
-    let segmentCount = 0;
-    findPairs: for (let i = 0; i < particles; i++) {
-      const ix = positions[i * 3];
-      const iy = positions[i * 3 + 1];
-      const iz = positions[i * 3 + 2];
-      for (let j = i + 1; j < particles; j++) {
-        const dx = ix - positions[j * 3];
-        const dy = iy - positions[j * 3 + 1];
-        const dz = iz - positions[j * 3 + 2];
-        const distanceSq = dx * dx + dy * dy + dz * dz;
-        if (distanceSq < LINK_DISTANCE_SQ) {
-          if (segmentCount >= maxSegments) break findPairs;
-          const base = segmentCount * 6;
-          linePositions[base + 0] = ix;
-          linePositions[base + 1] = iy;
-          linePositions[base + 2] = iz;
-          linePositions[base + 3] = positions[j * 3];
-          linePositions[base + 4] = positions[j * 3 + 1];
-          linePositions[base + 5] = positions[j * 3 + 2];
-          segmentCount++;
-        }
-      }
-    }
+    const segmentCount = findNeighbourPairs({
+      positions,
+      particleCount: particles,
+      linkDistanceSq: LINK_DISTANCE_SQ,
+      maxSegments,
+      output: linePositions,
+    });
 
     geometry.attributes.position.needsUpdate = true;
     geometry.setDrawRange(0, segmentCount * 2);
   });
-  /* eslint-enable react-hooks/immutability */
 
   // Belt-and-suspenders GPU cleanup: r3f already disposes non-`primitive`
   // three objects it constructed when this tree unmounts, but LazyCanvas

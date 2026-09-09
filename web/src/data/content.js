@@ -19,7 +19,12 @@ export const profile = {
   github: "https://github.com/TomasUhiaOtero",
   linkedin: "https://www.linkedin.com/in/tom%C3%A1s-uh%C3%ADa-otero-b10748345/",
   resume: "/TomasUhiaOteroResume.pdf",
-  heroPoster: "/img/hero-poster.webp",
+  // LazyCanvas resolves dark/light itself via useTheme() — see its
+  // docblock — so every caller just hands over both stills once.
+  heroPoster: {
+    dark: "/img/hero-poster.webp",
+    light: "/img/hero-poster-light.webp",
+  },
 };
 
 export const content = {
