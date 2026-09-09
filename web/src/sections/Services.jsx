@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { lazy, useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
@@ -7,22 +7,24 @@ import { services } from "../data/services.js";
 import useReducedMotion from "../hooks/useReducedMotion.js";
 import Reveal from "../components/Reveal.jsx";
 import Chip from "../components/Chip.jsx";
-import { ENTRANCE_EASE } from "../lib/ease.js";
 import { onEnterIndex, onLeaveBackIndex } from "./servicesScroll.js";
+import LazyCanvas from "../three/LazyCanvas.jsx";
 
 gsap.registerPlugin(ScrollTrigger);
+
+// Lazy, not a static import: see Hero.jsx's/About.jsx's identical comment
+// on `HeroField`/`TechCore` — a plain `import ServiceStage from
+// "../three/ServiceStage.jsx"` here would pull three/@react-three into
+// this module's import graph statically, and Services.jsx is reachable
+// from the app's entry point. Wrapping the reference in `React.lazy`
+// defers the `import()` to LazyCanvas's own first render attempt, which
+// it only makes once this section nears the viewport.
+const ServiceStage = lazy(() => import("../three/ServiceStage.jsx"));
 
 // Matches Tailwind's default `lg` breakpoint — About.jsx's own comment on
 // its identical constant explains why this is hardcoded rather than
 // imported: there is no Tailwind v4 JS config to read it from.
 const DESKTOP_QUERY = "(min-width: 1024px)";
-
-// Hazard 2 (this task's brief): the sticky label must never have two
-// states visually dominant at once. Mirrors About.jsx's group cross-fade —
-// fade the current label out, only swap its content once that fade has
-// actually finished, then fade the new one in.
-const LABEL_FADE_OUT = 0.2;
-const LABEL_FADE_IN = 0.3;
 
 function eyebrow(index) {
   return String(index + 1).padStart(2, "0");
@@ -30,10 +32,10 @@ function eyebrow(index) {
 
 /**
  * A single service's placeholder visual: an eyebrow index plus its title,
- * centred in a `bg-surface` panel. This is the "labelled placeholder"
- * Task 11 replaces wholesale with `<ServiceStage active={activeService} />`
- * — see the two call sites below for why there are two of them (the
- * shared sticky one, and each panel's own static mobile one).
+ * centred in a `bg-surface` panel. Task 11 replaced the sticky slot's
+ * instance of this wholesale with `<LazyCanvas><ServiceStage /></LazyCanvas>`
+ * (decorative/`aria-hidden`, so no text needed there); this component now
+ * only backs each panel's own static mobile placeholder below.
  */
 function ServicePlaceholder({ index, service, lang }) {
   return (
@@ -50,12 +52,17 @@ function ServicePlaceholder({ index, service, lang }) {
  * The services section: a two-column grid at `lg` — a sticky visual slot
  * on the left, four scrolling panels on the right (the "Resonance"
  * pattern per spec §6.4). One `ScrollTrigger` per panel sets
- * `activeService` (0-3) as it scrolls into view; the sticky slot
- * cross-fades to match.
+ * `activeService` (0-3) as it scrolls into view; the sticky slot's
+ * `<ServiceStage />` morphs to match.
  *
- * `activeService` is state, not a ref — Task 11's `<ServiceStage />` reads
- * it as a prop the way Task 9's `TechCore` read About's `stage`, and it
- * only changes four times per pass, so a real render each time is cheap.
+ * `activeService` is state, not a ref — `<ServiceStage />` reads it as a
+ * prop the way Task 9's `TechCore` read About's `stage`, and it only
+ * changes four times per pass, so a real render each time is cheap.
+ * `ServiceStage` reads `activeService` directly rather than some lagged
+ * "visible" version: it owns its own transition timing (a `uProgress`
+ * tween inside the scene itself, see `three/ServiceStage.jsx`), so unlike
+ * a DOM cross-fade it has no reason to wait on anything else finishing
+ * first.
  *
  * Below `lg`, and under reduced motion at any width, no `ScrollTrigger` is
  * ever created (see Effect A) — structurally the mobile layout does not
@@ -68,15 +75,10 @@ export default function Services() {
   const reduced = useReducedMotion();
 
   const panelRefs = useRef([]);
-  const labelRef = useRef(null);
 
-  // The panel the scroll position currently targets (0-3). Task 11 reads
-  // this directly.
+  // The panel the scroll position currently targets (0-3). `ServiceStage`
+  // reads this directly as its `active` prop.
   const [activeService, setActiveService] = useState(0);
-  // The service actually rendered in the sticky slot right now. Lags
-  // `activeService` by the fade-out below, so only one label is ever in
-  // the DOM's visible state at a time.
-  const [visibleService, setVisibleService] = useState(0);
 
   // Effect A: one ScrollTrigger per panel, gated to `lg` and skipped
   // outright under reduced motion — same discipline as About.jsx's own
@@ -127,66 +129,23 @@ export default function Services() {
     return () => mm.revert();
   }, [reduced]);
 
-  // Effect B: the sticky label's cross-fade out + swap.
-  useEffect(() => {
-    if (visibleService === activeService) return undefined;
-
-    const el = labelRef.current;
-    if (reduced || !el) {
-      setVisibleService(activeService);
-      return undefined;
-    }
-
-    const tween = gsap.to(el, {
-      opacity: 0,
-      duration: LABEL_FADE_OUT,
-      ease: ENTRANCE_EASE,
-      overwrite: "auto",
-      onComplete: () => setVisibleService(activeService),
-    });
-
-    return () => tween.kill();
-  }, [activeService, visibleService, reduced]);
-
-  // Effect C: the incoming label's fade-in. `useLayoutEffect` so the
-  // opacity reset happens before paint, matching About.jsx's Effect C.
-  useLayoutEffect(() => {
-    const el = labelRef.current;
-    if (!el) return undefined;
-
-    if (reduced) {
-      gsap.set(el, { opacity: 1 });
-      return undefined;
-    }
-
-    const tween = gsap.fromTo(
-      el,
-      { opacity: 0 },
-      { opacity: 1, duration: LABEL_FADE_IN, ease: ENTRANCE_EASE, overwrite: "auto" },
-    );
-
-    return () => tween.kill();
-  }, [visibleService, reduced]);
-
   return (
     <section id="servicios" className="relative">
       <div className="mx-auto grid w-full max-w-[1400px] gap-12 px-6 py-24 sm:px-10 lg:grid-cols-2 lg:gap-16 lg:py-32">
-        {/* Sticky visual: a self-contained slot. Task 11 replaces this
-            whole block with a <LazyCanvas> wrapping <ServiceStage /> — the
-            same discipline Hero.jsx's background layer and About.jsx's
-            right column already follow — so a failure in that scene can
-            never take the rest of this section down with it. Decorative
-            only (aria-hidden); the panel column below never assumes
-            anything about what lives inside this box beyond its own. */}
+        {/* Sticky visual: a self-contained slot. `LazyCanvas` owns its own
+            `aria-hidden`, the same discipline Hero.jsx's background layer
+            and About.jsx's right column already follow — so a failure
+            inside `ServiceStage` can never take the rest of this section
+            down with it. Decorative only; the panel column below never
+            assumes anything about what lives inside this box beyond its
+            own. */}
         <div className="hidden lg:block">
-          <div
-            aria-hidden="true"
+          <LazyCanvas
+            poster={{ dark: "/img/services-poster.webp", light: "/img/services-poster-light.webp" }}
             className="sticky top-24 aspect-[4/5] overflow-hidden rounded-3xl bg-surface"
           >
-            <div ref={labelRef}>
-              <ServicePlaceholder index={visibleService} service={services[visibleService]} lang={lang} />
-            </div>
-          </div>
+            <ServiceStage active={activeService} />
+          </LazyCanvas>
         </div>
 
         <div>

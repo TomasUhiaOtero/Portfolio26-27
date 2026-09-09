@@ -12,13 +12,20 @@
 const PHONE_BREAKPOINT = 768;
 const TABLET_BREAKPOINT = 1280;
 
-const PHONE_BUDGET = { particles: 90, dpr: [1, 1.5] };
-const TABLET_BUDGET = { particles: 160, dpr: [1, 1.75] };
-const DESKTOP_BUDGET = { particles: 260, dpr: [1, 2] };
+// `stagePoints`: the fixed vertex count for `ServiceStage.jsx`'s single
+// morphing-points geometry (Task 11). Every one of its four states is a
+// pure function of this one count (see `serviceShapes.js`) — it has to
+// live here rather than as a local constant so a slow device gets a
+// smaller shape the same way it gets fewer hero particles or a smaller
+// TechCore capacity, and so no scene ever hardcodes its own per-device
+// number (see this file's own docblock).
+const PHONE_BUDGET = { particles: 90, stagePoints: 220, dpr: [1, 1.5] };
+const TABLET_BUDGET = { particles: 160, stagePoints: 420, dpr: [1, 1.75] };
+const DESKTOP_BUDGET = { particles: 260, stagePoints: 640, dpr: [1, 2] };
 
 const LOW_MEMORY_THRESHOLD = 4;
 
-const DISABLED_BUDGET = { particles: 0, dpr: [1, 1], enabled: false };
+const DISABLED_BUDGET = { particles: 0, stagePoints: 0, dpr: [1, 1], enabled: false };
 
 export function getBudget({ width, deviceMemory, reduced }) {
   if (reduced) return DISABLED_BUDGET;
@@ -35,6 +42,7 @@ export function getBudget({ width, deviceMemory, reduced }) {
   // rather than being penalised for missing data.
   const isLowMemory = deviceMemory <= LOW_MEMORY_THRESHOLD;
   const particles = isLowMemory ? Math.round(tier.particles / 2) : tier.particles;
+  const stagePoints = isLowMemory ? Math.round(tier.stagePoints / 2) : tier.stagePoints;
 
-  return { particles, dpr: tier.dpr, enabled: true };
+  return { particles, stagePoints, dpr: tier.dpr, enabled: true };
 }

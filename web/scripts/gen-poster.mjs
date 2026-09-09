@@ -142,6 +142,82 @@
  * uniform field), reuse `core-orbit` rather than adding a third mode —
  * check first whether either existing mode already fits before writing a
  * new one.
+ *
+ * ---------------------------------------------------------------------
+ * Mode 3: `--mode grid-frame` (added for Task 11)
+ * ---------------------------------------------------------------------
+ *
+ * Task 11's `ServiceStage` morphs one points geometry between four
+ * states (grid folding into a browser frame / narrowing into a phone /
+ * dissolving into a scattered cloud / settling into stacked concentric
+ * rings) as the active service changes. Neither existing mode can stand
+ * in for a poster here: `network` draws a UNIFORM scattered field with
+ * distance-linked lines, and this scene's scattered state has no lines at
+ * all; `core-orbit` draws a distinct central body with a halo orbiting
+ * it, and none of the four states has a center-with-orbiters shape. The
+ * poster has to match whichever state is actually on screen the instant
+ * the canvas swaps in — and `Services.jsx` always mounts at
+ * `activeService === 0` (before any scroll), so `--mode grid-frame`
+ * renders exactly that resting state: an ordered `--grid-cols` x
+ * `--grid-rows` grid of dots in browser-window proportions, framed by a
+ * rectangular border stroke.
+ *
+ * Draw order, reusing the same primitives every other mode does
+ * (`drawLine`/`drawDot`/`applyVignette`/`mulberry32`):
+ *
+ *   1. A `--glow`-coloured rectangular stroke at `--frame-line-alpha`,
+ *      inset from the canvas edges by `--frame-margin-x`/`--frame-margin-y`
+ *      (fractions of width/height) — the poster's stand-in for the live
+ *      scene's raised frame "lip".
+ *   2. `--grid-cols` x `--grid-rows` `--accent` dots, evenly spaced across
+ *      that same rect. Dots that land on the frame's own border row/column
+ *      get `--border-radius-boost`/`--border-alpha-boost` applied to their
+ *      halo radius / core alpha, echoing the live scene's border vertices
+ *      sitting forward in z (see `serviceShapes.js`'s `FRAME_LIP`) —
+ *      exactly the same "vertex forced toward the eye reads as slightly
+ *      bigger/brighter" cue a real perspective render would produce.
+ *   3. `--seed`-driven per-dot alpha jitter (±`--dot-jitter`, uniform):
+ *      a perfectly even alpha grid reads as a printed pattern rather than
+ *      a field of individually-lit points — the same reason `network`
+ *      mode's per-dot rendering already has soft variation baked into its
+ *      halo/core falloff.
+ *
+ * The vignette (step 5 of `network` mode) applies identically here, same
+ * flags, same per-theme light-vignette caveat as both other modes.
+ *
+ * The rect itself is deliberately landscape (12 cols x 6 rows, wide
+ * margins top/bottom, narrower left/right) even though the canvas is
+ * portrait: `ServiceStage.jsx`'s own `BROWSER_WIDTH`/`BROWSER_HEIGHT`
+ * (1.7 x 1.05, a landscape rect) sit inside a portrait camera frustum, so
+ * the live "web-app" state genuinely reads as a wide, short rectangle
+ * with empty space above and below, not a shape that fills the box — the
+ * margins below were chosen to match that, not to center a square grid.
+ *
+ * Usage — regenerate the two current Services posters (run from `web/`):
+ *
+ *   node scripts/gen-poster.mjs --mode grid-frame \
+ *     --bg "#000000" --accent "#0a84ff" --glow "#5e5ce6" \
+ *     --width 1200 --height 1500 --seed 11 \
+ *     --grid-cols 12 --grid-rows 6 --frame-margin-x 0.13 --frame-margin-y 0.315 \
+ *     --frame-line-alpha 0.5 --border-radius-boost 1.35 --border-alpha-boost 1.3 \
+ *     --dot-jitter 0.25 \
+ *     --dot-halo-radius 11 --dot-halo-alpha 0.16 --dot-core-radius 3 --dot-core-alpha 0.82 \
+ *     --vignette-alpha 0.14 --vignette-start 0.85 \
+ *     --out public/img/services-poster.png
+ *   ffmpeg -y -i public/img/services-poster.png -c:v libwebp -quality 82 public/img/services-poster.webp
+ *   rm public/img/services-poster.png
+ *
+ *   node scripts/gen-poster.mjs --mode grid-frame \
+ *     --bg "#fbfbfd" --accent "#0071e3" --glow "#5856d6" \
+ *     --width 1200 --height 1500 --seed 11 \
+ *     --grid-cols 12 --grid-rows 6 --frame-margin-x 0.13 --frame-margin-y 0.315 \
+ *     --frame-line-alpha 0.24 --border-radius-boost 1.35 --border-alpha-boost 1.3 \
+ *     --dot-jitter 0.25 \
+ *     --dot-halo-radius 9 --dot-halo-alpha 0.08 --dot-core-radius 2.4 --dot-core-alpha 0.42 \
+ *     --vignette-alpha 0 --vignette-start 0.85 \
+ *     --out public/img/services-poster-light.png
+ *   ffmpeg -y -i public/img/services-poster-light.png -c:v libwebp -quality 82 public/img/services-poster-light.webp
+ *   rm public/img/services-poster-light.png
  */
 
 import { deflateSync } from "node:zlib";
@@ -470,6 +546,77 @@ function generateCoreOrbitPoster(options) {
   return canvas;
 }
 
+// Mode 3: an ordered grid of dots in browser-window proportions, framed by
+// a rectangular border stroke — see the docblock's "Mode 3" section for
+// the full rationale. Reuses `drawDot`/`drawLine`/`applyVignette`/
+// `mulberry32` from `network` mode; only the layout differs.
+function generateGridFramePoster(options) {
+  const {
+    width,
+    height,
+    bg,
+    accent,
+    glow,
+    seed,
+    gridCols,
+    gridRows,
+    frameMarginX,
+    frameMarginY,
+    frameLineAlpha,
+    borderRadiusBoost,
+    borderAlphaBoost,
+    dotJitter,
+    dotHaloRadius,
+    dotHaloAlpha,
+    dotCoreRadius,
+    dotCoreAlpha,
+    vignetteAlpha,
+    vignetteStart,
+    vignetteColor,
+  } = options;
+
+  const bgRgb = hexToRgb(bg);
+  const accentRgb = hexToRgb(accent);
+  const glowRgb = hexToRgb(glow);
+  const vignetteRgb = hexToRgb(vignetteColor);
+
+  const canvas = makeCanvas(width, height, bgRgb);
+  const rand = mulberry32(seed);
+
+  const left = width * frameMarginX;
+  const right = width * (1 - frameMarginX);
+  const top = height * frameMarginY;
+  const bottom = height * (1 - frameMarginY);
+
+  drawLine(canvas, left, top, right, top, glowRgb, frameLineAlpha, 1.4);
+  drawLine(canvas, right, top, right, bottom, glowRgb, frameLineAlpha, 1.4);
+  drawLine(canvas, right, bottom, left, bottom, glowRgb, frameLineAlpha, 1.4);
+  drawLine(canvas, left, bottom, left, top, glowRgb, frameLineAlpha, 1.4);
+
+  for (let row = 0; row < gridRows; row += 1) {
+    const v = gridRows > 1 ? row / (gridRows - 1) : 0.5;
+    const y = top + v * (bottom - top);
+    const onBorderRow = row === 0 || row === gridRows - 1;
+    for (let col = 0; col < gridCols; col += 1) {
+      const u = gridCols > 1 ? col / (gridCols - 1) : 0.5;
+      const x = left + u * (right - left);
+      const onBorder = onBorderRow || col === 0 || col === gridCols - 1;
+
+      // ±dotJitter uniform alpha variation so the grid reads as
+      // individually-lit points rather than a printed pattern.
+      const jitter = 1 + (rand() * 2 - 1) * dotJitter;
+      const haloRadius = onBorder ? dotHaloRadius * borderRadiusBoost : dotHaloRadius;
+      const coreAlpha = (onBorder ? dotCoreAlpha * borderAlphaBoost : dotCoreAlpha) * jitter;
+
+      drawDot(canvas, x, y, accentRgb, haloRadius, dotHaloAlpha * jitter, dotCoreRadius, coreAlpha);
+    }
+  }
+
+  applyVignette(canvas, vignetteAlpha, vignetteStart, vignetteRgb);
+
+  return canvas;
+}
+
 // ---------------------------------------------------------------------------
 // Minimal PNG encoder — chunk framing + CRC32 + zlib deflate. No `canvas`
 // package is installed in this project and adding a dependency for a
@@ -546,8 +693,8 @@ function main() {
   const args = parseArgs(process.argv.slice(2));
 
   const mode = requireString(args, "mode", "network");
-  if (mode !== "network" && mode !== "core-orbit") {
-    throw new Error(`--mode must be "network" or "core-orbit", got "${mode}"`);
+  if (mode !== "network" && mode !== "core-orbit" && mode !== "grid-frame") {
+    throw new Error(`--mode must be "network", "core-orbit" or "grid-frame", got "${mode}"`);
   }
 
   const shared = {
@@ -580,7 +727,7 @@ function main() {
     };
     canvas = generatePoster(options);
     summary = `${options.points} points, seed ${options.seed}`;
-  } else {
+  } else if (mode === "core-orbit") {
     const options = {
       ...shared,
       coreRadius: requireNumber(args, "core-radius", 220),
@@ -596,6 +743,20 @@ function main() {
     };
     canvas = generateCoreOrbitPoster(options);
     summary = `core-orbit, ${options.nodeCount} nodes, seed ${options.seed}`;
+  } else {
+    const options = {
+      ...shared,
+      gridCols: requireNumber(args, "grid-cols", 12),
+      gridRows: requireNumber(args, "grid-rows", 6),
+      frameMarginX: requireNumber(args, "frame-margin-x", 0.13),
+      frameMarginY: requireNumber(args, "frame-margin-y", 0.315),
+      frameLineAlpha: requireNumber(args, "frame-line-alpha", 0.5),
+      borderRadiusBoost: requireNumber(args, "border-radius-boost", 1.35),
+      borderAlphaBoost: requireNumber(args, "border-alpha-boost", 1.3),
+      dotJitter: requireNumber(args, "dot-jitter", 0.25),
+    };
+    canvas = generateGridFramePoster(options);
+    summary = `grid-frame, ${options.gridCols}x${options.gridRows}, seed ${options.seed}`;
   }
 
   const png = encodePng(canvas);
