@@ -3,6 +3,7 @@ import { LanguageProvider } from "./i18n/LanguageProvider.jsx";
 import SideRail from "./components/SideRail.jsx";
 import Hero from "./sections/Hero.jsx";
 import About from "./sections/About.jsx";
+import Services from "./sections/Services.jsx";
 import useLenis from "./hooks/useLenis.js";
 
 function AppShell() {
@@ -15,6 +16,7 @@ function AppShell() {
       <SideRail />
       <Hero />
       <About />
+      <Services />
     </main>
   );
 }
