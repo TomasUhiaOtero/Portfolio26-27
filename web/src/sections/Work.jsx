@@ -5,6 +5,7 @@ import useReducedMotion from "../hooks/useReducedMotion.js";
 import { createSpring } from "../lib/spring.js";
 import { wrapIndex, shortestOffset } from "../lib/carousel.js";
 import ProjectCard from "../components/ProjectCard.jsx";
+import ProjectOverlay from "../components/ProjectOverlay.jsx";
 
 const STEP = 26; // degrees of rotateY per ring — matches carousel.test.js
 const DESKTOP_RADIUS = 560;
@@ -23,7 +24,7 @@ const WHEEL_LOCK_MS = 350; // one card per wheel gesture, not one per tick
 
 // Ruling R4 (progress.md): Work owns `selectedProject` locally rather than
 // exposing an `onOpen` prop — Task 14 renders the overlay from this same
-// state, Task 13 only wires the click and stops here.
+// state.
 const ordered = [...projects.filter((p) => p.featured), ...projects.filter((p) => !p.featured)];
 
 function matchesDesktop() {
@@ -68,6 +69,12 @@ export default function Work() {
 
   const trackRef = useRef(null);
   const cardRefs = useRef([]);
+  // The DOM node of the card that opened the currently-shown overlay — the
+  // "source" rect for ProjectOverlay's shared-element transition. Set the
+  // instant an overlay opens (openProject, below) and left alone on close:
+  // the overlay's own reverse tween reads it one more time before it
+  // clears itself, so it must still point at the right card at that point.
+  const originRef = useRef(null);
   // A lazy `useState` initializer, not `useRef` + a conditional assignment
   // during render — the spring is a stable object created exactly once,
   // and this is the pattern React's own ref-during-render lint rule wants
@@ -195,7 +202,13 @@ export default function Work() {
   );
 
   const openProject = useCallback((project) => {
+    const index = ordered.findIndex((p) => p.id === project.id);
+    originRef.current = cardRefs.current[index] ?? null;
     setSelectedProject(project);
+  }, []);
+
+  const closeProject = useCallback(() => {
+    setSelectedProject(null);
   }, []);
 
   const handleSelect = useCallback(
@@ -395,9 +408,7 @@ export default function Work() {
         </div>
       </div>
 
-      {/* Task 14 renders the project overlay from `selectedProject`; this
-          task only owns the state transition (ruling R4, progress.md) and
-          renders nothing for it yet. */}
+      <ProjectOverlay project={selectedProject} onClose={closeProject} originRef={originRef} />
     </section>
   );
 }

@@ -77,6 +77,7 @@ export const content = {
       year: "Año",
       moreTitle: "Otros proyectos",
       viewProject: "Ver proyecto",
+      close: "Cerrar",
     },
     experience: {
       eyebrow: "Trayectoria",
@@ -216,6 +217,7 @@ export const content = {
       year: "Year",
       moreTitle: "Other projects",
       viewProject: "View project",
+      close: "Close",
     },
     experience: {
       eyebrow: "Background",
