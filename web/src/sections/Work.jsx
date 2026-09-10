@@ -38,7 +38,7 @@ export default function Work() {
   return (
     <section
       id="proyectos"
-      className="relative isolate overflow-hidden border-t border-line py-24 sm:py-32"
+      className="relative isolate border-t border-line py-24 sm:py-32"
       data-selected-project={selectedProject?.id}
     >
       <LazyCanvas

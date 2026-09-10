@@ -30,11 +30,12 @@ export default function ProjectCard({ project, onOpen }) {
       type="button"
       onClick={(event) => onOpen?.(project, event.currentTarget)}
       aria-label={`${title} — ${t.projects.viewProject}`}
-      className="group relative block aspect-[0.86] w-full cursor-pointer text-left outline-none transition-transform duration-500 ease-entrance hover:-translate-y-2 focus-visible:-translate-y-2 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-4 focus-visible:ring-offset-bg motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+      className="group relative block aspect-[0.82] w-full cursor-pointer text-left outline-none transition-transform duration-500 ease-entrance hover:-translate-y-2 focus-visible:-translate-y-2 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-4 focus-visible:ring-offset-bg motion-reduce:transition-none motion-reduce:hover:translate-y-0"
     >
-      {/* Photo: tucked behind the folder at rest, rises clear of it (and
-          in front of it, z-20) on hover so it is never clipped. */}
-      <span className="absolute inset-x-3 top-0 z-0 block h-[56%] overflow-hidden rounded-2xl shadow-xl transition-transform duration-500 ease-entrance group-hover:z-20 group-hover:-translate-y-[52%] group-hover:scale-[1.05] group-focus-visible:z-20 group-focus-visible:-translate-y-[52%] motion-reduce:!translate-y-0 motion-reduce:!scale-100">
+      {/* Photo: only a strip peeks above the folder at rest; on hover it
+          lifts well clear of the folder AND in front of it (z-20), so it
+          is never clipped by the body panel. */}
+      <span className="absolute inset-x-2 top-0 z-0 block h-[46%] overflow-hidden rounded-2xl shadow-xl transition-transform duration-500 ease-entrance group-hover:z-20 group-hover:-translate-y-[65%] group-focus-visible:z-20 group-focus-visible:-translate-y-[65%] motion-reduce:!translate-y-0">
         <picture>
           <source srcSet={`${project.image}-1600.avif`} type="image/avif" />
           <source
@@ -52,7 +53,7 @@ export default function ProjectCard({ project, onOpen }) {
       </span>
 
       {/* Folder body: solid panel, notched top-right (folder tab). */}
-      <span className="folder-clip absolute inset-x-0 bottom-0 z-10 flex h-[72%] flex-col justify-between bg-surface-2 p-5 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.65)] transition-transform duration-500 ease-entrance group-hover:translate-y-1 md:p-6">
+      <span className="folder-clip absolute inset-x-0 bottom-0 z-10 flex h-[62%] flex-col justify-between bg-surface-2 p-5 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.65)] transition-transform duration-500 ease-entrance md:p-6">
         <span className="flex items-start justify-between gap-3">
           <span className="text-[0.7rem] font-medium uppercase tracking-[0.2em] text-mute">
             {project.year}
