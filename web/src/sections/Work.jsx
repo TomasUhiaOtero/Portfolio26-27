@@ -401,6 +401,11 @@ export default function Work() {
     return () => stage.removeEventListener("wheel", handleWheel);
   }, [handleWheel]);
 
+  const step = useCallback(
+    (dir) => moveFocus(focusIndexRef.current + dir, { focusDom: false }),
+    [moveFocus],
+  );
+
   const listboxId = "proyectos-carousel";
 
   return (
@@ -444,6 +449,24 @@ export default function Work() {
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
       >
+        {[
+          { dir: -1, label: t.projects.prev, side: "left-3 sm:left-6", d: "M15 18l-6-6 6-6" },
+          { dir: 1, label: t.projects.next, side: "right-3 sm:right-6", d: "M9 18l6-6-6-6" },
+        ].map(({ dir, label, side, d }) => (
+          <button
+            key={dir}
+            type="button"
+            aria-label={label}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => step(dir)}
+            className={`absolute top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-xl border border-line bg-surface/70 text-text backdrop-blur-xl transition-colors hover:bg-surface focus-visible:ring-2 focus-visible:ring-accent ${side}`}
+          >
+            <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden="true">
+              <path d={d} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        ))}
+
         <div
           ref={trackRef}
           id={listboxId}

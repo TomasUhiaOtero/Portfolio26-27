@@ -78,6 +78,8 @@ export const content = {
       moreTitle: "Otros proyectos",
       viewProject: "Ver proyecto",
       close: "Cerrar",
+      prev: "Proyecto anterior",
+      next: "Proyecto siguiente",
     },
     experience: {
       eyebrow: "Trayectoria",
@@ -219,6 +221,8 @@ export const content = {
       moreTitle: "Other projects",
       viewProject: "View project",
       close: "Close",
+      prev: "Previous project",
+      next: "Next project",
     },
     experience: {
       eyebrow: "Background",

@@ -20,10 +20,14 @@ export function shortestOffset(index, focus, length) {
   return raw > length / 2 ? raw - length : raw;
 }
 
+// Depth is conveyed by blur + brightness, never opacity: a translucent
+// card lets the cards stacked behind it bleed through, which reads as a
+// rendering glitch rather than depth. `dim` is a `brightness()` multiplier
+// (1 = untouched, <1 = pushed back into shadow).
 const RINGS = [
-  { opacity: 1, blur: 0 },
-  { opacity: 0.55, blur: 2 },
-  { opacity: 0.25, blur: 4 },
+  { dim: 1, blur: 0 },
+  { dim: 0.5, blur: 3 },
+  { dim: 0.28, blur: 6 },
 ];
 
 /**
@@ -35,12 +39,12 @@ const RINGS = [
 export function cardTransform(offset, { step, radius }) {
   const ring = Math.abs(offset);
   if (ring >= RINGS.length) {
-    return { transform: "", opacity: 0, blur: 0, hidden: true };
+    return { transform: "", dim: 0, blur: 0, hidden: true };
   }
-  const { opacity, blur } = RINGS[ring];
+  const { dim, blur } = RINGS[ring];
   return {
     transform: `rotateY(${offset * step}deg) translateZ(${radius}px)`,
-    opacity,
+    dim,
     blur,
     hidden: false,
   };

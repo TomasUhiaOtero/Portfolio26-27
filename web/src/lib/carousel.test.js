@@ -19,22 +19,25 @@ describe("wrapIndex", () => {
 describe("cardTransform", () => {
   const opts = { step: 26, radius: 560 };
 
-  it("leaves the focused card unrotated and fully opaque", () => {
+  it("leaves the focused card unrotated, unblurred and at full brightness", () => {
     const t = cardTransform(0, opts);
-    expect(t.opacity).toBe(1);
+    expect(t.dim).toBe(1);
     expect(t.blur).toBe(0);
     expect(t.transform).toContain("rotateY(0deg)");
   });
 
-  it("rotates and dims a neighbour", () => {
+  it("rotates, blurs and dims a neighbour — but never makes it translucent", () => {
     const t = cardTransform(1, opts);
     expect(t.transform).toContain("rotateY(26deg)");
-    expect(t.opacity).toBeLessThan(1);
+    expect(t.dim).toBeGreaterThan(0);
+    expect(t.dim).toBeLessThan(1);
     expect(t.blur).toBeGreaterThan(0);
+    expect(t).not.toHaveProperty("opacity");
   });
 
-  it("is symmetric in opacity for equal distances", () => {
-    expect(cardTransform(-2, opts).opacity).toBe(cardTransform(2, opts).opacity);
+  it("is symmetric in dim/blur for equal distances", () => {
+    expect(cardTransform(-2, opts).dim).toBe(cardTransform(2, opts).dim);
+    expect(cardTransform(-2, opts).blur).toBe(cardTransform(2, opts).blur);
   });
 
   it("hides cards beyond the third ring so they are never painted", () => {
