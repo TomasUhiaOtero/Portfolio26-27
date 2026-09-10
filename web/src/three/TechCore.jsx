@@ -224,12 +224,21 @@ export default function TechCore({ progressRef, stage }) {
       <group ref={coreGroupRef}>
         <mesh>
           <icosahedronGeometry ref={coreGeometryRef} args={[CORE_RADIUS, CORE_DETAIL]} />
-          <meshBasicMaterial ref={coreMaterialRef} wireframe transparent opacity={0.9} />
+          {/* `color` seeded from the current theme so a dropped/slow first
+              frame (or an evicted context) shows the accent wireframe, not
+              meshBasicMaterial's white default. useFrame keeps it current. */}
+          <meshBasicMaterial
+            ref={coreMaterialRef}
+            color={colors.core.current}
+            wireframe
+            transparent
+            opacity={0.9}
+          />
         </mesh>
       </group>
       <instancedMesh ref={nodeMeshRef} args={[null, null, capacity]}>
         <sphereGeometry ref={nodeGeometryRef} args={[NODE_RADIUS, NODE_SEGMENTS, NODE_SEGMENTS]} />
-        <meshBasicMaterial ref={nodeMaterialRef} transparent opacity={0.9} />
+        <meshBasicMaterial ref={nodeMaterialRef} color={colors.node.current} transparent opacity={0.9} />
       </instancedMesh>
     </>
   );

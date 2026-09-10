@@ -411,7 +411,7 @@ export default function Work() {
   return (
     <section
       id="proyectos"
-      className="relative overflow-hidden py-24 sm:py-32"
+      className="relative isolate overflow-hidden border-t border-line py-24 sm:py-32"
       data-selected-project={selectedProject?.id}
     >
       {/* Backdrop: its own absolutely-positioned stack behind everything

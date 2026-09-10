@@ -302,7 +302,7 @@ export default function Experience() {
   }, [reduced]);
 
   return (
-    <section id="experiencia" className="relative py-24 sm:py-32">
+    <section id="experiencia" className="relative border-t border-line bg-surface py-24 sm:py-32">
       <div className="mx-auto max-w-[1400px] px-6 sm:px-10">
         <Reveal as="p" className="text-xs uppercase tracking-[0.3em] text-mute">
           {t.experience.eyebrow}

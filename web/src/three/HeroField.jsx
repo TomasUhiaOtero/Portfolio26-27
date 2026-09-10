@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useFrame, useThree } from "@react-three/fiber";
+import { useFrame } from "@react-three/fiber";
 import { PerspectiveCamera } from "@react-three/drei";
 import { useTheme } from "../theme/ThemeProvider.jsx";
 import useReducedMotion from "../hooks/useReducedMotion.js";
@@ -59,7 +59,20 @@ function randomSlabPositions(count) {
 export default function HeroField() {
   const { theme } = useTheme();
   const reduced = useReducedMotion();
-  const { pointer } = useThree();
+
+  // r3f's own `pointer` only updates from events on the canvas, but this
+  // scene sits behind the hero copy (`-z-10`), so the canvas never sees a
+  // pointermove. Track it off `window` instead, normalised to [-1, 1].
+  const pointerRef = useRef({ x: 0, y: 0 });
+  useEffect(() => {
+    if (reduced) return undefined;
+    const onMove = (e) => {
+      pointerRef.current.x = (e.clientX / window.innerWidth) * 2 - 1;
+      pointerRef.current.y = -((e.clientY / window.innerHeight) * 2 - 1);
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
+    return () => window.removeEventListener("pointermove", onMove);
+  }, [reduced]);
 
   const { particles } = useMemo(
     () => getBudget({ width: window.innerWidth, deviceMemory: navigator.deviceMemory, reduced }),
@@ -72,6 +85,7 @@ export default function HeroField() {
   const lineGeometryRef = useRef(null);
   const lineMaterialRef = useRef(null);
   const frameParityRef = useRef(0);
+  const parallaxRef = useRef({ x: 0, y: 0 });
 
   // Colours are read once from computed styles at construction time (the
   // `data-theme` attribute is already correct by then — this only mounts
@@ -122,18 +136,23 @@ export default function HeroField() {
   // cheap at 260 points (the mutation itself lives in
   // `findNeighbourPairs`, in neighbourLines.js, where it's unit-tested).
   useFrame(() => {
-    // Pointer parallax: lerp toward the target each frame rather than
-    // snapping to it, so the tilt trails the cursor instead of sticking
-    // to it.
+    const now = performance.now();
+
+    // The field is always gently alive: a slow sine sway on both axes so
+    // it reads as animated even with the pointer still (a full continuous
+    // yaw would turn the flat slab edge-on and make it vanish). The
+    // pointer then adds a trailing parallax offset on top — lerped, not
+    // snapped, so the tilt follows the cursor rather than sticking to it.
     const group = groupRef.current;
     if (group) {
-      const targetX = pointer.y * 0.15;
-      const targetY = pointer.x * 0.25;
-      group.rotation.x += (targetX - group.rotation.x) * PARALLAX_LERP;
-      group.rotation.y += (targetY - group.rotation.y) * PARALLAX_LERP;
+      const p = pointerRef.current;
+      parallaxRef.current.x += (p.y * 0.12 - parallaxRef.current.x) * PARALLAX_LERP;
+      parallaxRef.current.y += (p.x * 0.28 - parallaxRef.current.y) * PARALLAX_LERP;
+      group.rotation.x = Math.sin(now * 0.00017) * 0.05 + parallaxRef.current.x;
+      group.rotation.y = Math.sin(now * 0.00011) * 0.09 + parallaxRef.current.y;
+      group.position.x = Math.sin(now * 0.00009) * 0.15;
     }
 
-    const now = performance.now();
     const pointColor = tickColorTransition(colors.point, now);
     const lineColor = tickColorTransition(colors.line, now);
     if (pointsMaterialRef.current) pointsMaterialRef.current.color.copy(pointColor);
@@ -191,6 +210,7 @@ export default function HeroField() {
           </bufferGeometry>
           <pointsMaterial
             ref={pointsMaterialRef}
+            color={colors.point.current}
             size={0.05}
             sizeAttenuation
             transparent
@@ -202,7 +222,13 @@ export default function HeroField() {
           <bufferGeometry ref={lineGeometryRef}>
             <bufferAttribute attach="attributes-position" args={[linePositions, 3]} />
           </bufferGeometry>
-          <lineBasicMaterial ref={lineMaterialRef} transparent opacity={0.22} depthWrite={false} />
+          <lineBasicMaterial
+            ref={lineMaterialRef}
+            color={colors.line.current}
+            transparent
+            opacity={0.22}
+            depthWrite={false}
+          />
         </lineSegments>
       </group>
     </>

@@ -31,7 +31,7 @@ export default function Contact() {
   return (
     <section
       id="contacto"
-      className="relative flex min-h-dvh flex-col justify-center py-24 sm:py-32"
+      className="relative flex min-h-dvh flex-col justify-center border-t border-line bg-surface py-24 sm:py-32"
     >
       <div className="mx-auto w-full max-w-[1400px] px-6 sm:px-10">
         <Reveal as="p" className="text-xs uppercase tracking-[0.3em] text-mute">

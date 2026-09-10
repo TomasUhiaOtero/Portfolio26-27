@@ -130,7 +130,7 @@ export default function Services() {
   }, [reduced]);
 
   return (
-    <section id="servicios" className="relative">
+    <section id="servicios" className="relative border-t border-line">
       <div className="mx-auto grid w-full max-w-[1400px] gap-12 px-6 py-24 sm:px-10 lg:grid-cols-2 lg:gap-16 lg:py-32">
         {/* Sticky visual: a self-contained slot. `LazyCanvas` owns its own
             `aria-hidden`, the same discipline Hero.jsx's background layer

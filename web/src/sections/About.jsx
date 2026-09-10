@@ -203,10 +203,14 @@ export default function About() {
   const group = t.stack.groups[visibleStage];
 
   return (
-    <section id="sobre-mi" ref={sectionRef} className="relative lg:h-[300vh]">
+    <section
+      id="sobre-mi"
+      ref={sectionRef}
+      className="relative border-t border-line bg-surface lg:h-[300vh]"
+    >
       <div
         ref={pinRef}
-        className="relative mx-auto flex w-full max-w-[1400px] flex-col gap-12 px-6 py-24 sm:px-10 lg:h-screen lg:grid lg:grid-cols-2 lg:gap-16 lg:py-0"
+        className="relative mx-auto flex w-full max-w-[1400px] flex-col gap-12 px-6 py-28 sm:px-10 lg:grid lg:h-screen lg:grid-cols-2 lg:gap-16 lg:py-24"
       >
         {/* No `items-center` on the grid above: a centered grid item never
             gets a definite height from its row, and the placeholder's own
