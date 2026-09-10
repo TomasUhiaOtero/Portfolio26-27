@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
@@ -41,7 +41,7 @@ function JobCard({ entry, side }) {
       }`}
     >
       <span className="text-xs uppercase tracking-[0.2em] text-mute">{entry.period}</span>
-      <h3 className="mt-2 text-xl font-semibold text-text sm:text-2xl">{entry.role}</h3>
+      <h4 className="mt-2 text-xl font-semibold text-text sm:text-2xl">{entry.role}</h4>
       <p className="mt-1 text-sm text-mute">{entry.company}</p>
       <p className="mt-4 text-base leading-relaxed text-mute">{entry.summary}</p>
       <p className="mt-3 text-base leading-relaxed text-text">{entry.impact}</p>
@@ -63,114 +63,156 @@ function EducationCard({ entry, side }) {
       }`}
     >
       <span className="text-xs uppercase tracking-[0.2em] text-mute">{entry.period}</span>
-      <h3 className="mt-2 text-xl font-semibold text-text sm:text-2xl">{entry.title}</h3>
+      <h4 className="mt-2 text-xl font-semibold text-text sm:text-2xl">{entry.title}</h4>
       <p className="mt-1 text-sm text-mute">{entry.place}</p>
     </div>
   );
 }
 
 /**
- * The Experience section: a scroll-drawn vertical rail with one node per
- * entry (the two `experience.items`, a divider carrying `educationTitle`,
- * then the two `experience.education` entries) and a card alongside each
- * non-divider node.
+ * One titled rail group — a heading, a base rail, a scroll-drawn accent
+ * overlay line, and one node + card per entry. Experience renders two of
+ * these: work history, then education, visually and semantically distinct
+ * (their own `<h3>` and their own rail) rather than a single rail split by
+ * a divider label.
+ *
+ * The `register*` callbacks hand this group's line/node/card DOM nodes up
+ * to the parent, which owns the three scroll effects — keeping all the
+ * ScrollTrigger wiring in one place regardless of how many groups there
+ * are. `cardIndexBase` continues the left/right alternation from wherever
+ * the previous group left off.
+ */
+function RailGroup({ title, kind, entries, cardIndexBase }) {
+  const Card = kind === "job" ? JobCard : EducationCard;
+
+  return (
+    <div className="relative first:mt-0">
+      {title ? (
+        <h3 className="mt-20 text-2xl font-semibold tracking-tight text-text lg:mt-28 lg:text-center">
+          {title}
+        </h3>
+      ) : null}
+
+      {/* `data-rail-*` attributes let the parent's three scroll effects
+          collect every line/node/card with a single querySelectorAll,
+          instead of threading ref arrays through this presentational
+          component. */}
+      <div data-rail-group className={`relative ${title ? "mt-10 lg:mt-16" : ""}`}>
+        {/* Base rail: always visible, 1px, full height. */}
+        <div className="absolute left-4 top-0 h-full w-px -translate-x-1/2 bg-line lg:left-1/2" />
+        {/* Accent overlay: scrubbed from scaleY 0 to 1 by the parent's Effect A. */}
+        <div
+          data-rail-line
+          className="absolute left-4 top-0 h-full w-px origin-top -translate-x-1/2 scale-y-0 bg-accent lg:left-1/2"
+        />
+
+        <ol className="relative flex flex-col gap-16 lg:gap-24">
+          {entries.map((entry, i) => {
+            const cardIndex = cardIndexBase + i;
+            const side = cardSide(cardIndex);
+
+            return (
+              <li key={`${kind}-${cardIndex}`} className="relative pl-10 lg:pl-0">
+                <span
+                  data-rail-node
+                  aria-hidden="true"
+                  className="absolute left-4 top-6 h-3 w-3 -translate-x-1/2 rounded-full bg-accent lg:left-1/2"
+                />
+
+                <div className="lg:grid lg:grid-cols-2 lg:gap-x-16">
+                  <div
+                    data-rail-card
+                    className={side === "left" ? "lg:col-start-1" : "lg:col-start-2"}
+                  >
+                    <Card entry={entry} side={side} />
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The Experience section: two scroll-drawn rail groups — work history and
+ * education — each with its own heading and its own rail.
  *
  * Three independent scroll-linked behaviours live here, each with its own
  * effect and its own reduced-motion resting state — never a shared
  * timeline, so one hazard's fix can never regress another's:
  *
- * Effect A (the rail): an accent overlay line scrubbed from `scaleY: 0` to
- * `1` as the section scrolls through view. `scrub`, not a fixed-duration
- * tween, so it can run backward as cleanly as forward — see Task 10's
- * `servicesScroll.js` doc comment for why this project treats
- * both-directions correctness as a first-class hazard on every scrubbed
- * or `once`-gated trigger, not just an afterthought.
+ * Effect A (the rails): each group's accent overlay line, scrubbed from
+ * `scaleY: 0` to `1` as it scrolls through view. `scrub`, not a
+ * fixed-duration tween, so it can run backward as cleanly as forward.
  *
- * Effect B (the nodes): one `ScrollTrigger` per node, `once: true`. A node
- * that re-popped on every pass back through it would be noise, so once it
- * has popped it simply stays popped regardless of further scrolling in
- * either direction.
+ * Effect B (the nodes): one `ScrollTrigger` per node, `once: true`.
  *
- * Effect C (the cards): the alternating-side entrance. This is the
- * section's own version of Task 10's `gsap.matchMedia` discipline — the
- * *direction* a card enters from (not just whether it animates at all)
- * depends on the `lg` breakpoint, so the breakpoint check has to gate the
- * animation itself, not just a CSS class layered on top of it. `mm.add`
- * is given both the desktop query and its exact mobile complement so the
- * callback re-runs (killing and recreating every card's trigger with the
- * correct sign) on either side of a live resize — see experienceScroll.js
- * for the pure "which sign, at which breakpoint" logic this defers to.
+ * Effect C (the cards): the alternating-side entrance, gated by
+ * `gsap.matchMedia` so the *direction* a card enters from forks
+ * structurally on the `lg` breakpoint.
  *
- * None of the three effects gate *whether* they run behind `lg` — the
- * rail draws and the nodes pop the same way at every width. Only the
- * cards' entrance direction forks structurally on the breakpoint.
- *
- * Under reduced motion, all three resolve to their resting state
- * directly (line fully drawn, nodes at their popped scale, cards at rest
- * with no transform) and no `ScrollTrigger` is ever created — see each
- * effect's own early return.
+ * Under reduced motion all three resolve to their resting state directly
+ * and no `ScrollTrigger` is ever created — see each effect's early return.
  */
 export default function Experience() {
   const { t } = useLanguage();
   const reduced = useReducedMotion();
 
-  const sectionRef = useRef(null);
-  const lineRef = useRef(null);
-  const nodeRefs = useRef([]);
-  const cardRefs = useRef([]);
+  const rootRef = useRef(null);
 
-  // Flattens `items` + a divider + `education` into the rail's render
-  // order once per language change. `cardIndex` is assigned only to the
-  // two groups of real cards (not the divider), continuously across both,
-  // so `experienceScroll.js`'s alternation never restarts at "left" when
-  // education begins.
-  const timeline = useMemo(() => {
-    let cardIndex = 0;
-    return [
-      ...t.experience.items.map((data) => ({ kind: "job", data, cardIndex: cardIndex++ })),
-      { kind: "divider", label: t.experience.educationTitle },
-      ...t.experience.education.map((data) => ({ kind: "education", data, cardIndex: cardIndex++ })),
-    ];
-  }, [t.experience]);
+  const jobs = t.experience.items;
+  const education = t.experience.education;
 
-  // Effect A: the rail's accent overlay line.
+  // Effect A: each rail group's accent overlay line.
   useEffect(() => {
-    const root = sectionRef.current;
-    const line = lineRef.current;
-    if (!line) return undefined;
+    const root = rootRef.current;
+    if (!root) return undefined;
+    const lines = [...root.querySelectorAll("[data-rail-line]")];
+    if (lines.length === 0) return undefined;
 
-    if (reduced || !root) {
-      gsap.set(line, { scaleY: 1 });
+    if (reduced) {
+      gsap.set(lines, { scaleY: 1 });
       return undefined;
     }
 
-    const hasLayout = root.getClientRects().length > 0 || root.offsetParent !== null;
-    if (!hasLayout) return undefined;
+    const tweens = lines
+      .map((line) => {
+        const hasLayout = line.getClientRects().length > 0 || line.offsetParent !== null;
+        if (!hasLayout) return null;
 
-    const tween = gsap.fromTo(
-      line,
-      { scaleY: 0, transformOrigin: "top" },
-      {
-        scaleY: 1,
-        ease: "none",
-        scrollTrigger: {
-          trigger: root,
-          start: "top 70%",
-          end: "bottom 30%",
-          scrub: LINE_SCRUB,
-        },
-      },
-    );
+        return gsap.fromTo(
+          line,
+          { scaleY: 0, transformOrigin: "top" },
+          {
+            scaleY: 1,
+            ease: "none",
+            scrollTrigger: {
+              trigger: line.parentElement,
+              start: "top 70%",
+              end: "bottom 30%",
+              scrub: LINE_SCRUB,
+            },
+          },
+        );
+      })
+      .filter(Boolean);
 
     return () => {
-      tween.scrollTrigger?.kill();
-      tween.kill();
+      tweens.forEach((tween) => {
+        tween.scrollTrigger?.kill();
+        tween.kill();
+      });
     };
   }, [reduced]);
 
   // Effect B: each node's one-shot pop.
   useEffect(() => {
-    const nodes = nodeRefs.current.filter(Boolean);
+    const root = rootRef.current;
+    if (!root) return undefined;
+    const nodes = [...root.querySelectorAll("[data-rail-node]")];
     if (nodes.length === 0) return undefined;
 
     if (reduced) {
@@ -202,20 +244,17 @@ export default function Experience() {
       .filter(Boolean);
 
     return () => triggers.forEach((trigger) => trigger.kill());
-    // Deliberately `[reduced]` only, not `timeline`: a language switch
-    // changes each entry's text but never the DOM nodes themselves (same
-    // keys, same order, same count per data.test.js's shape guarantee),
-    // so the existing refs and triggers stay valid. Re-running this on
-    // every language toggle would re-hide already-popped nodes for no
-    // reason — the same trap Effect C's own comment below explains for
-    // cards.
+    // Deliberately `[reduced]` only: a language switch changes each
+    // entry's text but never the DOM nodes themselves (same keys, order
+    // and count per data.test.js's shape guarantee), so re-running this
+    // would only re-hide already-popped nodes.
   }, [reduced]);
 
-  // Effect C: each card's alternating-side entrance — see the docblock
-  // above for why the direction itself has to be gated by
-  // `gsap.matchMedia` rather than a CSS class.
+  // Effect C: each card's alternating-side entrance.
   useEffect(() => {
-    const cards = cardRefs.current.filter(Boolean);
+    const root = rootRef.current;
+    if (!root) return undefined;
+    const cards = [...root.querySelectorAll("[data-rail-card]")];
     if (cards.length === 0) return undefined;
 
     if (reduced) {
@@ -259,13 +298,7 @@ export default function Experience() {
     });
 
     return () => mm.revert();
-    // Deliberately `[reduced]` only, not `timeline`: re-running this on a
-    // language toggle (same DOM nodes, only their text changes) would
-    // force `mm.revert()`'s cleanup — which resets every card to its
-    // rest state — then immediately re-hide and re-arm a trigger for
-    // every card, including ones a visitor had already scrolled past and
-    // seen revealed. That would make already-popped cards vanish and
-    // need a re-scroll just because the language toggled.
+    // Deliberately `[reduced]` only — see Effect B's note.
   }, [reduced]);
 
   return (
@@ -282,61 +315,14 @@ export default function Experience() {
           {t.experience.title}
         </Reveal>
 
-        <div ref={sectionRef} className="relative mt-16 lg:mt-24">
-          {/* Base rail: always visible, 1px, full height. */}
-          <div className="absolute left-4 top-0 h-full w-px -translate-x-1/2 bg-line lg:left-1/2" />
-          {/* Accent overlay: scrubbed from scaleY 0 to 1 by Effect A. */}
-          <div
-            ref={lineRef}
-            className="absolute left-4 top-0 h-full w-px origin-top -translate-x-1/2 scale-y-0 bg-accent lg:left-1/2"
+        <div ref={rootRef} className="mt-16 lg:mt-24">
+          <RailGroup kind="job" entries={jobs} cardIndexBase={0} />
+          <RailGroup
+            title={t.experience.educationTitle}
+            kind="education"
+            entries={education}
+            cardIndexBase={jobs.length}
           />
-
-          <ol className="relative flex flex-col gap-16 lg:gap-24">
-            {timeline.map((entry, index) => {
-              if (entry.kind === "divider") {
-                return (
-                  <li key="education-divider" className="relative pl-10 lg:pl-0 lg:text-center">
-                    <span
-                      ref={(el) => {
-                        nodeRefs.current[index] = el;
-                      }}
-                      aria-hidden="true"
-                      className="absolute left-4 top-1 h-3 w-3 -translate-x-1/2 rounded-full bg-accent lg:left-1/2"
-                    />
-                    <p className="text-xs font-medium uppercase tracking-[0.3em] text-mute">
-                      {entry.label}
-                    </p>
-                  </li>
-                );
-              }
-
-              const side = cardSide(entry.cardIndex);
-              const Card = entry.kind === "job" ? JobCard : EducationCard;
-
-              return (
-                <li key={`${entry.kind}-${entry.cardIndex}`} className="relative pl-10 lg:pl-0">
-                  <span
-                    ref={(el) => {
-                      nodeRefs.current[index] = el;
-                    }}
-                    aria-hidden="true"
-                    className="absolute left-4 top-6 h-3 w-3 -translate-x-1/2 rounded-full bg-accent lg:left-1/2"
-                  />
-
-                  <div className="lg:grid lg:grid-cols-2 lg:gap-x-16">
-                    <div
-                      ref={(el) => {
-                        cardRefs.current[entry.cardIndex] = el;
-                      }}
-                      className={side === "left" ? "lg:col-start-1" : "lg:col-start-2"}
-                    >
-                      <Card entry={entry.data} side={side} />
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
         </div>
       </div>
     </section>

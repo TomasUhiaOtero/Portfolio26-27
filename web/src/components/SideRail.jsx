@@ -81,23 +81,34 @@ export default function SideRail() {
       onBlur={collapse}
       className="fixed bottom-4 inset-x-0 z-40 mx-auto flex w-fit flex-row items-center gap-2 rounded-2xl border border-line bg-surface/60 px-3 py-2 backdrop-blur-xl md:inset-x-auto md:right-6 md:top-1/2 md:bottom-auto md:mx-0 md:w-auto md:-translate-y-1/2 md:flex-col md:border-0 md:bg-transparent md:px-0 md:py-0 md:backdrop-blur-none"
     >
-      {/* Decorative label panel — see the block comment above for why it
-          is aria-hidden *and* inert, and why it never holds a control. */}
+      {/* Label panel revealed on hover/focus. The always-present bars
+          below are the canonical, accessibility-tree-exposed controls and
+          the only ones in the Tab sequence; this panel is `aria-hidden`
+          and `inert` while collapsed. When expanded it becomes clickable
+          for pointer users — each label is a real `<button>` that runs the
+          same `handleSelect` — but its buttons stay `tabIndex={-1}` so
+          they never double up the keyboard path, and every action they
+          offer is duplicated by the adjacent non-hidden bar. */}
       <div
         aria-hidden="true"
         inert={!expanded}
-        className={`pointer-events-none absolute bottom-full left-1/2 mb-3 flex origin-bottom -translate-x-1/2 flex-col gap-2 whitespace-nowrap rounded-2xl border border-line bg-surface/60 px-4 py-3 backdrop-blur-xl transition-[opacity,transform] duration-200 ease-entrance md:bottom-auto md:left-auto md:right-full md:top-1/2 md:mb-0 md:mr-3 md:origin-right md:-translate-y-1/2 md:translate-x-0 ${
-          expanded ? "scale-100 opacity-100" : "scale-95 opacity-0"
+        className={`absolute bottom-full left-1/2 mb-3 flex origin-bottom -translate-x-1/2 flex-col gap-1 whitespace-nowrap rounded-2xl border border-line bg-surface/60 p-2 backdrop-blur-xl transition-[opacity,transform] duration-200 ease-entrance md:bottom-auto md:left-auto md:right-full md:top-1/2 md:mb-0 md:mr-3 md:origin-right md:-translate-y-1/2 md:translate-x-0 ${
+          expanded ? "scale-100 opacity-100" : "pointer-events-none scale-95 opacity-0"
         }`}
       >
         {links.map((link, index) => (
-          <span
+          <button
             key={link.id}
+            type="button"
+            tabIndex={-1}
+            onClick={() => handleSelect(link.id)}
             style={{ transitionDelay: expanded ? `${Math.min(index, 5) * 40}ms` : "0ms" }}
-            className="text-sm text-text transition-opacity duration-200 ease-entrance"
+            className={`cursor-pointer rounded-lg px-3 py-1.5 text-left text-sm transition-[opacity,color,background-color] duration-200 ease-entrance hover:bg-line/60 ${
+              link.id === active ? "text-text" : "text-mute hover:text-text"
+            }`}
           >
             {link.label}
-          </span>
+          </button>
         ))}
       </div>
 
@@ -110,7 +121,7 @@ export default function SideRail() {
             aria-label={link.label}
             aria-current={isActive ? "true" : undefined}
             onClick={() => handleSelect(link.id)}
-            className="flex h-10 w-10 shrink-0 items-center justify-center active:scale-[0.97]"
+            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center active:scale-[0.97]"
           >
             <span
               aria-hidden="true"
