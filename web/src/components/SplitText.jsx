@@ -22,10 +22,16 @@ export default function SplitText({
   as: Tag = "span",
   className = "",
   animate = true,
+  highlight,
 }) {
   const ref = useRef(null);
   const reduced = useReducedMotion();
   const words = text.split(" ");
+
+  // A word matches `highlight` ignoring case and any leading/trailing
+  // punctuation, so "full-stack" also catches "full-stack," and "Full-stack".
+  const norm = (w) => w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "").toLowerCase();
+  const highlightNorm = highlight ? norm(highlight) : null;
 
   // useLayoutEffect, not useEffect: the "from" state here is applied by
   // GSAP itself (there is no CSS class hiding these words before JS runs,
@@ -81,7 +87,12 @@ export default function SplitText({
     <Tag ref={ref} className={`overflow-hidden pb-[0.2em] -mb-[0.2em] ${className}`}>
       {words.map((word, i) => (
         <Fragment key={`${word}-${i}`}>
-          <span data-word className={wordClassName}>
+          <span
+            data-word
+            className={`${wordClassName}${
+              highlightNorm && norm(word) === highlightNorm ? " text-accent" : ""
+            }`}
+          >
             {word}
           </span>
           {i < words.length - 1 ? " " : null}

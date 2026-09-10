@@ -76,6 +76,7 @@ export default function LazyCanvas({
     return () => document.removeEventListener("visibilitychange", onVisibilityChange);
   }, []);
 
+
   // Dev-only contract check: the docblock above has always said `children`
   // must be lazy-loaded, but prose is easy to miss and this wrapper's
   // whole reason to exist is keeping `three` out of the initial bundle.
@@ -110,6 +111,26 @@ export default function LazyCanvas({
   const mounted = budget.enabled && nearViewport;
   const posterSrc = theme === "light" ? poster.light : poster.dark;
   const dpr = dprVariant === "backdrop" ? budget.backdropDpr : budget.dpr;
+
+  // r3f measures its own container on mount; when the `<Canvas>` mounts
+  // through a lazy chunk + Suspense swap inside this `absolute inset-0`
+  // wrapper, that first measurement can land as 0×0 and — because the
+  // ResizeObserver behind it only reports *changes* — never recover,
+  // leaving the scene rendering into the 300×150 default until an
+  // unrelated window resize. `resize={{ offsetSize: true }}` on the Canvas
+  // covers the common case; these post-mount nudges also carry a
+  // re-measure across the async chunk-load boundary (the Canvas element
+  // doesn't exist yet on the first frame after `mounted` flips true).
+  useEffect(() => {
+    if (!mounted) return undefined;
+    const nudge = () => window.dispatchEvent(new Event("resize"));
+    const raf = requestAnimationFrame(nudge);
+    const t = setTimeout(nudge, 300);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t);
+    };
+  }, [mounted]);
 
   const posterImage = (
     <img

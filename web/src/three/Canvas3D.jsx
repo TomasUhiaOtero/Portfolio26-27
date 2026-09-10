@@ -50,6 +50,13 @@ export default function Canvas3D({ dpr, paused, frameloop = "always", children }
       dpr={[dpr[0], maxDpr]}
       gl={{ antialias: false, powerPreference: "high-performance" }}
       frameloop={paused ? "never" : frameloop}
+      // Measure via offsetWidth/offsetHeight, read synchronously with
+      // layout, instead of waiting on a ResizeObserver entry. When the
+      // canvas mounts inside a lazy/Suspense swap in an `absolute inset-0`
+      // wrapper, that first RO callback can arrive as 0×0 and — since RO
+      // only reports *changes* — never correct itself, leaving the canvas
+      // stuck at the 300×150 default until an unrelated window resize.
+      resize={{ offsetSize: true }}
     >
       <PerformanceMonitor onDecline={handleDecline} />
       {children}

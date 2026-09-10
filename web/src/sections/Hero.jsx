@@ -51,6 +51,12 @@ export default function Hero() {
           bundle never executes at all. */}
       <div data-curtain className="fixed inset-0 z-50 bg-bg" />
 
+      {/* Ambient aurora: pure-CSS drifting colour blobs, furthest back, so
+          the hero always has motion and depth even before the particle
+          canvas mounts or if WebGL never runs. Frozen under reduced
+          motion (see styles/index.css). */}
+      <div aria-hidden="true" className="hero-aurora -z-20" />
+
       {/* Background layer: its own absolutely-positioned stack, painted
           onto nothing else. Renders the poster until the hero nears the
           viewport, then lazily mounts the particle field; unmounts it
@@ -81,6 +87,7 @@ export default function Hero() {
           as="h1"
           text={t.hero.headline}
           animate={false}
+          highlight="full-stack"
           className="mt-6 text-[clamp(3rem,9vw,8rem)] font-semibold leading-[0.95] tracking-[-0.045em] text-text"
         />
 
