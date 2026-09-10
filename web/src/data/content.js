@@ -155,6 +155,7 @@ export const content = {
       intro:
         "La forma más rápida es el correo. Respondo en menos de 24 horas.",
       emailLabel: "Correo",
+      resumeLabel: "CV",
       phoneLabel: "Teléfono",
       locationLabel: "Ubicación",
       location: "Pontevedra, España",
@@ -290,6 +291,7 @@ export const content = {
       title: "Got a project? Let's talk.",
       intro: "Email is the fastest way. I reply within 24 hours.",
       emailLabel: "Email",
+      resumeLabel: "Résumé",
       phoneLabel: "Phone",
       locationLabel: "Location",
       location: "Pontevedra, Spain",

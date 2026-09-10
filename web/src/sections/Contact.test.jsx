@@ -34,7 +34,9 @@ describe("Contact", () => {
 
   it("renders a mailto link for the profile email", () => {
     renderWithProviders(<Contact />);
-    const link = screen.getByRole("link", { name: t.contact.emailLabel });
+    // The address itself is the accessible name — no aria-label override
+    // (WCAG 2.5.3 Label-in-Name).
+    const link = screen.getByRole("link", { name: profile.email });
     expect(link).toHaveAttribute("href", `mailto:${profile.email}`);
     expect(link).toHaveTextContent(profile.email);
   });

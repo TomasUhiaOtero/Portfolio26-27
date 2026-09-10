@@ -45,6 +45,8 @@ describe("Footer", () => {
     renderWithProviders(<Footer />);
     fireEvent.click(screen.getByRole("button", { name: t.footer.backToTop }));
 
-    expect(windowScrollTo).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
+    // Instant jump, not behavior:"smooth" — the no-Lenis path is the
+    // reduced-motion user.
+    expect(windowScrollTo).toHaveBeenCalledWith(0, 0);
   });
 });

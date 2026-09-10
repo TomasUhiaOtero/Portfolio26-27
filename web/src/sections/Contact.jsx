@@ -25,7 +25,7 @@ export default function Contact() {
     { label: c.locationLabel, value: c.location, href: null },
     { label: c.githubLabel, value: "GitHub", href: profile.github },
     { label: c.linkedinLabel, value: "LinkedIn", href: profile.linkedin },
-    { label: t.about.resumeCta, value: t.about.resumeCta, href: profile.resume },
+    { label: c.resumeLabel, value: t.about.resumeCta, href: profile.resume },
   ];
 
   return (
@@ -53,7 +53,6 @@ export default function Contact() {
         <Reveal as="div" delay={0.12} className="mt-12">
           <a
             href={`mailto:${profile.email}`}
-            aria-label={c.emailLabel}
             className="group relative inline-block text-[clamp(1.75rem,6vw,4.5rem)] font-semibold leading-[1.1] tracking-tight text-text"
           >
             {profile.email}

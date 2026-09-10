@@ -16,7 +16,12 @@ export default function Footer() {
     if (lenis) {
       lenis.scrollTo(0);
     } else {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      // getLenis() only returns null under reduced motion — exactly the
+      // user who asked for no smooth scroll, so this fallback jumps
+      // instantly rather than forcing behavior:"smooth". Mirrors how
+      // SideRail.jsx and the skip link fall back to a plain native scroll
+      // in the same situation.
+      window.scrollTo(0, 0);
     }
   };
 
