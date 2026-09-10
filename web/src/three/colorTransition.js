@@ -37,3 +37,17 @@ export function tickColorTransition(transition, now) {
   transition.current.copy(transition.from).lerp(transition.target, t);
   return transition.current;
 }
+
+/**
+ * True while `transition` is still mid-lerp at `now`. Every other scene
+ * built on this module (HeroField, TechCore, ServiceStage) runs its
+ * `<Canvas>` at `frameloop="always"`, so it never needed to ask this
+ * question — a frame renders regardless. `WorkBackdrop` (Task 15) is the
+ * first scene on `frameloop="demand"`, where nothing repaints unless
+ * something explicitly calls `invalidate()`; this is how its `useFrame`
+ * loop knows whether a colour lerp is still in flight and worth chaining
+ * another frame for, versus having already settled.
+ */
+export function isColorTransitionActive(transition, now) {
+  return transition.start !== 0 && now - transition.start < COLOR_LERP_MS;
+}

@@ -218,6 +218,72 @@
  *     --out public/img/services-poster-light.png
  *   ffmpeg -y -i public/img/services-poster-light.png -c:v libwebp -quality 82 public/img/services-poster-light.webp
  *   rm public/img/services-poster-light.png
+ *
+ * ---------------------------------------------------------------------
+ * Mode 4: `--mode radial-glow` (added for Task 15)
+ * ---------------------------------------------------------------------
+ *
+ * `WorkBackdrop.jsx` (the projects carousel's backdrop) is neither a
+ * scattered field, a central-body-with-orbiters, nor a grid — it's a
+ * fragment shader: a full-bleed radial gradient from `--accent` (centre)
+ * to `--glow` (edge) blended over `--bg`, plus a soft `--glow`-coloured
+ * light blob whose horizontal position tracks the carousel's continuous
+ * index (see `src/three/workBackdrop.js`'s `blobPosition`). None of the
+ * three raster modes above has any notion of a smooth per-pixel gradient —
+ * they all composite discrete dots/lines onto a flat background — so this
+ * mode reimplements the live shader's exact formula in JS, per pixel,
+ * rather than trying to bend an existing mode's discrete-primitive
+ * language into a continuous one.
+ *
+ * `Work.jsx` always mounts at `focusIndex === 0` before any interaction,
+ * so the poster renders `blobPosition(0, length) === 0` — the blob sits
+ * dead centre, matching the resting frame the real canvas is replaced by.
+ *
+ * Per-pixel formula (mirrors the GLSL in `WorkBackdrop.jsx` exactly,
+ * including its `smoothstep(0.85, 0.0, blobDist)` reversed-edge idiom):
+ *
+ *   1. Normalise each pixel to `p = (uv - 0.5) * vec2(aspect, 1)`, aspect
+ *      from `--width`/`--height`.
+ *   2. `d = length(p)`; gradient = lerp(accent, glow, smoothstep(0,
+ *      `--gradient-outer`, d)); colour = lerp(bg, gradient,
+ *      `--gradient-mix`).
+ *   3. Blob centre at `(--blob-x * aspect * 0.45, 0)`; `blobDist =
+ *      length(p - blobCenter)`; `blob = smoothstep(--blob-radius, 0,
+ *      blobDist)`; colour += glow * blob * `--blob-alpha`.
+ *   4. The same `applyVignette` step every other mode uses, same per-theme
+ *      caveat (light poster ships `--vignette-alpha 0`).
+ *
+ * Unlike `network` mode's raster marks, this composites full-opacity
+ * colour across the *entire* frame (`mix(bg, gradient, gradientMix)` at
+ * every pixel, not a sparse overlay), so — unlike the dark-marks-on-light
+ * vs light-marks-on-dark contrast problem that made the other three modes
+ * need different alpha values per theme — the same `--gradient-mix`/
+ * `--blob-alpha` read at comparable weight in both themes: contrast here
+ * comes from `--accent`/`--glow`/`--bg` themselves differing, not from an
+ * alpha tuned against a fixed-luminance ground. Only the vignette still
+ * needs its usual per-theme fork.
+ *
+ * Usage — regenerate the two current Work posters (run from `web/`):
+ *
+ *   node scripts/gen-poster.mjs --mode radial-glow \
+ *     --bg "#000000" --accent "#0a84ff" --glow "#5e5ce6" \
+ *     --width 1600 --height 900 \
+ *     --gradient-outer 1.1 --gradient-mix 0.30 \
+ *     --blob-x 0 --blob-radius 0.85 --blob-alpha 0.22 \
+ *     --vignette-alpha 0.14 --vignette-start 0.85 \
+ *     --out public/img/work-poster.png
+ *   ffmpeg -y -i public/img/work-poster.png -c:v libwebp -quality 82 public/img/work-poster.webp
+ *   rm public/img/work-poster.png
+ *
+ *   node scripts/gen-poster.mjs --mode radial-glow \
+ *     --bg "#fbfbfd" --accent "#0071e3" --glow "#5856d6" \
+ *     --width 1600 --height 900 \
+ *     --gradient-outer 1.1 --gradient-mix 0.30 \
+ *     --blob-x 0 --blob-radius 0.85 --blob-alpha 0.22 \
+ *     --vignette-alpha 0 --vignette-start 0.85 \
+ *     --out public/img/work-poster-light.png
+ *   ffmpeg -y -i public/img/work-poster-light.png -c:v libwebp -quality 82 public/img/work-poster-light.webp
+ *   rm public/img/work-poster-light.png
  */
 
 import { deflateSync } from "node:zlib";
@@ -617,6 +683,84 @@ function generateGridFramePoster(options) {
   return canvas;
 }
 
+// GLSL's `smoothstep(edge0, edge1, x)` — the plain clamp-and-Hermite-smooth
+// formula. The spec calls `edge0 >= edge1` "undefined", but every WebGL
+// implementation in practice just evaluates the same formula regardless,
+// which is what `WorkBackdrop.jsx`'s fragment shader relies on for its
+// `smoothstep(0.85, 0.0, blobDist)` (reversed edges, so the blob is
+// brightest at its centre and fades OUT with distance). Reproduced here so
+// this raster poster matches that shader pixel-for-pixel in spirit rather
+// than approximating it with a differently-shaped falloff.
+function smoothstepGlsl(edge0, edge1, x) {
+  let t = (x - edge0) / (edge1 - edge0);
+  t = Math.max(0, Math.min(1, t));
+  return t * t * (3 - 2 * t);
+}
+
+function lerpRgb(a, b, t) {
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+}
+
+// Mode 4: a per-pixel port of `WorkBackdrop.jsx`'s fragment shader — see
+// the docblock's "Mode 4" section for the full rationale. Unlike the other
+// three modes (which composite sparse dots/lines via `blendPixel`'s alpha
+// mechanism), every pixel here gets a fully-opaque colour written directly,
+// matching the live shader's `gl_FragColor = vec4(color, 1.0)`.
+function generateRadialGlowPoster(options) {
+  const {
+    width,
+    height,
+    bg,
+    accent,
+    glow,
+    gradientOuter,
+    gradientMix,
+    blobX,
+    blobRadius,
+    blobAlpha,
+    vignetteAlpha,
+    vignetteStart,
+    vignetteColor,
+  } = options;
+
+  const bgRgb = hexToRgb(bg);
+  const accentRgb = hexToRgb(accent);
+  const glowRgb = hexToRgb(glow);
+  const vignetteRgb = hexToRgb(vignetteColor);
+
+  const canvas = makeCanvas(width, height, bgRgb);
+  const aspect = width / height;
+  const blobCenterX = blobX * aspect * 0.45;
+
+  for (let y = 0; y < height; y += 1) {
+    const py = (y + 0.5) / height - 0.5; // matches (vUv.y - 0.5)
+    for (let x = 0; x < width; x += 1) {
+      const px = ((x + 0.5) / width - 0.5) * aspect; // matches (vUv.x - 0.5) * aspect
+
+      const d = Math.hypot(px, py);
+      const gradient = lerpRgb(accentRgb, glowRgb, smoothstepGlsl(0, gradientOuter, d));
+      let color = lerpRgb(bgRgb, gradient, gradientMix);
+
+      const blobDist = Math.hypot(px - blobCenterX, py);
+      const blob = smoothstepGlsl(blobRadius, 0, blobDist) * blobAlpha;
+      color = [
+        color[0] + glowRgb[0] * blob,
+        color[1] + glowRgb[1] * blob,
+        color[2] + glowRgb[2] * blob,
+      ];
+
+      const i = (y * width + x) * 3;
+      canvas.pixels[i] = color[0];
+      canvas.pixels[i + 1] = color[1];
+      canvas.pixels[i + 2] = color[2];
+    }
+  }
+
+  applyVignette(canvas, vignetteAlpha, vignetteStart, vignetteRgb);
+
+  return canvas;
+}
+
 // ---------------------------------------------------------------------------
 // Minimal PNG encoder — chunk framing + CRC32 + zlib deflate. No `canvas`
 // package is installed in this project and adding a dependency for a
@@ -693,8 +837,9 @@ function main() {
   const args = parseArgs(process.argv.slice(2));
 
   const mode = requireString(args, "mode", "network");
-  if (mode !== "network" && mode !== "core-orbit" && mode !== "grid-frame") {
-    throw new Error(`--mode must be "network", "core-orbit" or "grid-frame", got "${mode}"`);
+  const VALID_MODES = ["network", "core-orbit", "grid-frame", "radial-glow"];
+  if (!VALID_MODES.includes(mode)) {
+    throw new Error(`--mode must be one of ${VALID_MODES.map((m) => `"${m}"`).join(", ")}, got "${mode}"`);
   }
 
   const shared = {
@@ -743,7 +888,7 @@ function main() {
     };
     canvas = generateCoreOrbitPoster(options);
     summary = `core-orbit, ${options.nodeCount} nodes, seed ${options.seed}`;
-  } else {
+  } else if (mode === "grid-frame") {
     const options = {
       ...shared,
       gridCols: requireNumber(args, "grid-cols", 12),
@@ -757,6 +902,17 @@ function main() {
     };
     canvas = generateGridFramePoster(options);
     summary = `grid-frame, ${options.gridCols}x${options.gridRows}, seed ${options.seed}`;
+  } else {
+    const options = {
+      ...shared,
+      gradientOuter: requireNumber(args, "gradient-outer", 1.1),
+      gradientMix: requireNumber(args, "gradient-mix", 0.3),
+      blobX: requireNumber(args, "blob-x", 0),
+      blobRadius: requireNumber(args, "blob-radius", 0.85),
+      blobAlpha: requireNumber(args, "blob-alpha", 0.22),
+    };
+    canvas = generateRadialGlowPoster(options);
+    summary = `radial-glow, blob-x ${options.blobX}`;
   }
 
   const png = encodePng(canvas);

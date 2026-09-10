@@ -43,8 +43,27 @@ const Canvas3D = lazy(() => import("./Canvas3D.jsx"));
  * counts: every such decision lives in one auditable place rather than as
  * a ternary repeated at each of Hero's/Tasks 9/11/15's call sites, where a
  * forgotten one would fail silently with a wrong (or blank) poster.
+ *
+ * `dprVariant` ("standard", the default, or "backdrop") picks which of
+ * `getBudget`'s two dpr ceilings this mount uses — "backdrop" is one step
+ * softer, for a full-bleed fragment-shader layer like `WorkBackdrop` where
+ * resolution costs nothing visually (see `adaptive.js`'s `backdropDpr`).
+ *
+ * `frameloop` ("always", the default, or "demand") is passed straight
+ * through to `Canvas3D`/`<Canvas>`. Every scene before Task 15 runs
+ * `"always"` — colours/orbits/morphs tick every frame regardless. A scene
+ * on `"demand"` is responsible for calling `useThree().invalidate()`
+ * itself whenever it has something new to paint; nothing here does that
+ * for it.
  */
-export default function LazyCanvas({ poster, className, rootMargin = "200px", children }) {
+export default function LazyCanvas({
+  poster,
+  className,
+  rootMargin = "200px",
+  dprVariant = "standard",
+  frameloop = "always",
+  children,
+}) {
   const wrapperRef = useRef(null);
   const reduced = useReducedMotion();
   const nearViewport = useInViewport(wrapperRef, { rootMargin, once: false });
@@ -90,6 +109,7 @@ export default function LazyCanvas({ poster, className, rootMargin = "200px", ch
 
   const mounted = budget.enabled && nearViewport;
   const posterSrc = theme === "light" ? poster.light : poster.dark;
+  const dpr = dprVariant === "backdrop" ? budget.backdropDpr : budget.dpr;
 
   const posterImage = (
     <img
@@ -104,7 +124,7 @@ export default function LazyCanvas({ poster, className, rootMargin = "200px", ch
     <div ref={wrapperRef} aria-hidden="true" className={className}>
       {mounted ? (
         <Suspense fallback={posterImage}>
-          <Canvas3D dpr={budget.dpr} paused={paused}>
+          <Canvas3D dpr={dpr} paused={paused} frameloop={frameloop}>
             {children}
           </Canvas3D>
         </Suspense>

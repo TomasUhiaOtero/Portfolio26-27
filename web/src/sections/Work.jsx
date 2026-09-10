@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, useCallback, useEffect, useRef, useState } from "react";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
 import { projects } from "../data/projects.js";
 import useReducedMotion from "../hooks/useReducedMotion.js";
@@ -6,6 +6,16 @@ import { createSpring } from "../lib/spring.js";
 import { wrapIndex, shortestOffset } from "../lib/carousel.js";
 import ProjectCard from "../components/ProjectCard.jsx";
 import ProjectOverlay from "../components/ProjectOverlay.jsx";
+import LazyCanvas from "../three/LazyCanvas.jsx";
+
+// Lazy, not a static import: see Hero.jsx's/Services.jsx's identical
+// comment on `HeroField`/`ServiceStage` — a plain `import WorkBackdrop from
+// "../three/WorkBackdrop.jsx"` here would pull three/@react-three into this
+// module's import graph statically, and Work.jsx is reachable from the
+// app's entry point. Wrapping the reference in `React.lazy` defers the
+// `import()` to LazyCanvas's own first render attempt, which it only makes
+// once this section nears the viewport.
+const WorkBackdrop = lazy(() => import("../three/WorkBackdrop.jsx"));
 
 const STEP = 26; // degrees of rotateY per ring — matches carousel.test.js
 const DESKTOP_RADIUS = 560;
@@ -36,7 +46,13 @@ function matchesDesktop() {
  * turn every card into a texture — blurry text, no real `<a>`/`<button>`
  * elements, no keyboard navigation — in the most important section of the
  * site, so the geometry here is real DOM elements under `perspective` and
- * `rotateY`. Task 15 adds a WebGL backdrop behind it, not instead of it.
+ * `rotateY`. Task 15 adds a WebGL backdrop behind it, not instead of it:
+ * `<WorkBackdrop>` reads `continuousIndexRef` (below) as a plain ref, the
+ * same "read a ref inside useFrame, never subscribe to it as state" rule
+ * `TechCore.jsx` established for its own externally-driven `progressRef` —
+ * it is Effect B's rAF loop that owns writing that value every frame while
+ * dragging or settling, so the backdrop has no business re-rendering (or
+ * pulling this section along with it) every time it moves.
  *
  * Geometry model, so the two moving parts don't fight over the same
  * transform ("one owner of a given DOM element's transform at a time"):
@@ -361,6 +377,20 @@ export default function Work() {
       className="relative overflow-hidden py-24 sm:py-32"
       data-selected-project={selectedProject?.id}
     >
+      {/* Backdrop: its own absolutely-positioned stack behind everything
+          else in the section, same discipline as Hero.jsx's background
+          layer. `dprVariant="backdrop"` and `frameloop="demand"` are this
+          scene's own opt-ins — see LazyCanvas.jsx/WorkBackdrop.jsx for why
+          this is the one scene in the project that asks for either. */}
+      <LazyCanvas
+        poster={{ dark: "/img/work-poster.webp", light: "/img/work-poster-light.webp" }}
+        dprVariant="backdrop"
+        frameloop="demand"
+        className="absolute inset-0 -z-10 overflow-hidden"
+      >
+        <WorkBackdrop indexRef={continuousIndexRef} length={length} />
+      </LazyCanvas>
+
       <div className="mx-auto w-full max-w-[1400px] px-6 sm:px-10">
         <p className="text-xs uppercase tracking-[0.3em] text-mute">{t.projects.eyebrow}</p>
         <h2 className="mt-4 text-4xl font-semibold leading-[1.05] tracking-tight text-text md:text-5xl">

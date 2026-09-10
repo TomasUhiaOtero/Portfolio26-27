@@ -22,6 +22,22 @@ describe("getBudget", () => {
     expect(low.particles).toBeLessThan(normal.particles);
   });
 
+  describe("backdropDpr", () => {
+    it("caps one step below the tier's own dpr ceiling", () => {
+      const budget = getBudget({ width: 1920, reduced: false });
+      expect(budget.backdropDpr[1]).toBeCloseTo(budget.dpr[1] - 0.25);
+    });
+
+    it("never drops the ceiling below the tier's own floor", () => {
+      const budget = getBudget({ width: 390, reduced: false });
+      expect(budget.backdropDpr[1]).toBeGreaterThanOrEqual(budget.backdropDpr[0]);
+    });
+
+    it("is [1, 1] when 3D is disabled", () => {
+      expect(getBudget({ width: 1920, reduced: true }).backdropDpr).toEqual([1, 1]);
+    });
+  });
+
   describe("stagePoints", () => {
     it("disables 3D entirely under reduced motion", () => {
       expect(getBudget({ width: 1920, reduced: true }).stagePoints).toBe(0);

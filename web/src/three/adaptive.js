@@ -25,7 +25,15 @@ const DESKTOP_BUDGET = { particles: 260, stagePoints: 640, dpr: [1, 2] };
 
 const LOW_MEMORY_THRESHOLD = 4;
 
-const DISABLED_BUDGET = { particles: 0, stagePoints: 0, dpr: [1, 1], enabled: false };
+// Matches `Canvas3D.jsx`'s own `DPR_STEP` (its `PerformanceMonitor` decline
+// step). Duplicated rather than imported: `Canvas3D.jsx` pulls in
+// `@react-three/fiber`/`three`, and this module is imported eagerly by
+// `LazyCanvas.jsx` — outside the lazy boundary that keeps that whole stack
+// out of the initial bundle (see `LazyCanvas.jsx`'s own docblock). Importing
+// `Canvas3D.jsx` from here would defeat that split.
+const DPR_STEP = 0.25;
+
+const DISABLED_BUDGET = { particles: 0, stagePoints: 0, dpr: [1, 1], backdropDpr: [1, 1], enabled: false };
 
 export function getBudget({ width, deviceMemory, reduced }) {
   if (reduced) return DISABLED_BUDGET;
@@ -44,5 +52,13 @@ export function getBudget({ width, deviceMemory, reduced }) {
   const particles = isLowMemory ? Math.round(tier.particles / 2) : tier.particles;
   const stagePoints = isLowMemory ? Math.round(tier.stagePoints / 2) : tier.stagePoints;
 
-  return { particles, stagePoints, dpr: tier.dpr, enabled: true };
+  // `backdropDpr`: Task 15's `WorkBackdrop` is a full-bleed fragment-shader
+  // backdrop, not a particle field — softness there costs nothing visually
+  // (the brief's own words), so it renders one DPR step below whatever tier
+  // the hero (and every other scene) uses, via `LazyCanvas`'s
+  // `dprVariant="backdrop"`. `Math.max(tier.dpr[0], ...)` keeps the floor
+  // from ever dropping below the tier's own minimum.
+  const backdropDpr = [tier.dpr[0], Math.max(tier.dpr[0], tier.dpr[1] - DPR_STEP)];
+
+  return { particles, stagePoints, dpr: tier.dpr, backdropDpr, enabled: true };
 }

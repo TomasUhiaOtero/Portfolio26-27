@@ -17,8 +17,14 @@ const DPR_STEP = 0.25;
  * Degrades resolution under load rather than letting frames drop: when
  * `PerformanceMonitor` reports sustained low FPS, the DPR ceiling steps
  * down. A softer image always beats a stuttering one.
+ *
+ * `frameloop` defaults to `"always"` (every scene before Task 15's
+ * `WorkBackdrop` wants that — colours/orbits/morphs tick every frame) but
+ * can be overridden to `"demand"` for a scene that calls its own
+ * `invalidate()`. `paused` always wins over it: a hidden tab gets `"never"`
+ * regardless of which mode the scene asked for.
  */
-export default function Canvas3D({ dpr, paused, children }) {
+export default function Canvas3D({ dpr, paused, frameloop = "always", children }) {
   // `state.dpr` resets `maxDpr` whenever the incoming `dpr` prop changes
   // (e.g. a live reduced-motion flip recomputing the budget upstream).
   // This is React's documented "adjust state when a prop changes"
@@ -43,7 +49,7 @@ export default function Canvas3D({ dpr, paused, children }) {
     <Canvas
       dpr={[dpr[0], maxDpr]}
       gl={{ antialias: false, powerPreference: "high-performance" }}
-      frameloop={paused ? "never" : "always"}
+      frameloop={paused ? "never" : frameloop}
     >
       <PerformanceMonitor onDecline={handleDecline} />
       {children}
