@@ -24,17 +24,27 @@ const CAMERA_Z_END = 4.2;
 // rather than inventing a one-off feel for this scene.
 const STAGE_TWEEN_SECONDS = 0.8;
 
-// The wireframe core: an icosahedron at detail 1, per the brief, spinning
-// continuously and independently of the stage tween.
+// The wireframe core: an icosahedron, tumbling on all three axes at
+// different rates (reads as organic rather than a rigid spin) and
+// breathing slightly, independently of the stage tween.
 const CORE_RADIUS = 1.3;
-const CORE_DETAIL = 1;
-const CORE_SPIN_SPEED = 0.15; // radians/second around Y
+const CORE_DETAIL = 2;
+const CORE_SPIN_SPEED = 0.15; // radians/second, base rate
 
 // Node instances are small spheres; radius and segment count are fixed
 // visual constants (not a per-device count — there are at most a handful
 // of these per stage, already far below anything adaptive.js needs to cap).
 const NODE_RADIUS = 0.09;
-const NODE_SEGMENTS = 10;
+const NODE_SEGMENTS = 12;
+
+// Deterministic hash of an index into [0, 1) — used to give each node its
+// own size, a small radius offset and a bob phase, so the ring reads as a
+// loose swarm rather than beads on a wire. No Math.random: same
+// reproducibility discipline as serviceShapes.js.
+function hash(n) {
+  const x = Math.sin(n * 12.9898) * 43758.5453123;
+  return x - Math.floor(x);
+}
 
 // One orbital configuration per technology-group stage
 // (Frontend/Backend/Data/Tooling), each visually distinct so a stage
@@ -166,14 +176,22 @@ export default function TechCore({ progressRef, stage }) {
     const elapsed = clockRef.current;
 
     if (coreGroupRef.current) {
-      coreGroupRef.current.rotation.y += delta * CORE_SPIN_SPEED;
+      const g = coreGroupRef.current;
+      g.rotation.y += delta * CORE_SPIN_SPEED;
+      g.rotation.x += delta * CORE_SPIN_SPEED * 0.42;
+      g.rotation.z += delta * CORE_SPIN_SPEED * 0.23;
+      const breathe = 1 + Math.sin(elapsed * 0.9) * 0.03;
+      g.scale.setScalar(breathe);
     }
 
     const now = performance.now();
     const coreColor = tickColorTransition(colors.core, now);
     const nodeColor = tickColorTransition(colors.node, now);
     if (coreMaterialRef.current) coreMaterialRef.current.color.copy(coreColor);
-    if (nodeMaterialRef.current) nodeMaterialRef.current.color.copy(nodeColor);
+    if (nodeMaterialRef.current) {
+      nodeMaterialRef.current.color.copy(nodeColor);
+      nodeMaterialRef.current.emissive.copy(nodeColor);
+    }
 
     // Hazard 4: reading the ref directly keeps the scroll-driven camera
     // dolly off React's render path entirely.
@@ -185,9 +203,20 @@ export default function TechCore({ progressRef, stage }) {
       const config = orbitRef.current;
       for (let i = 0; i < capacity; i += 1) {
         const angle = nodeAngle(i, capacity, elapsed, config.speed);
-        const [x, y, z] = orbitPosition({ radius: config.radius, inclination: config.inclination, angle });
-        const scale = instanceVisibility(i, config.count);
-        dummy.position.set(x, y, z);
+        // Per-node radius offset + a slow vertical bob, so the ring
+        // undulates instead of being a rigid circle.
+        const rOffset = (hash(i * 1.7 + 0.3) - 0.5) * 0.45;
+        const bob = Math.sin(elapsed * (0.6 + hash(i * 2.9) * 0.7) + i) * 0.12;
+        const [x, y, z] = orbitPosition({
+          radius: config.radius + rOffset,
+          inclination: config.inclination,
+          angle,
+        });
+        // Per-node size variation on top of the boundary-crossing
+        // visibility scale.
+        const sizeVary = 0.6 + hash(i * 3.3 + 1.1) * 0.9;
+        const scale = instanceVisibility(i, config.count) * sizeVary;
+        dummy.position.set(x, y + bob, z);
         dummy.scale.setScalar(scale);
         dummy.updateMatrix();
         mesh.setMatrixAt(i, dummy.matrix);
@@ -221,6 +250,10 @@ export default function TechCore({ progressRef, stage }) {
   return (
     <>
       <PerspectiveCamera makeDefault position={[0, 0, CAMERA_Z_START]} fov={45} />
+      {/* A soft key light gives the node spheres real form; the ambient
+          keeps their dark sides from going black. */}
+      <ambientLight intensity={0.55} />
+      <pointLight position={[3, 2, 5]} intensity={70} distance={20} decay={2} />
       <group ref={coreGroupRef}>
         <mesh>
           <icosahedronGeometry ref={coreGeometryRef} args={[CORE_RADIUS, CORE_DETAIL]} />
@@ -232,13 +265,22 @@ export default function TechCore({ progressRef, stage }) {
             color={colors.core.current}
             wireframe
             transparent
-            opacity={0.9}
+            opacity={0.85}
           />
         </mesh>
       </group>
       <instancedMesh ref={nodeMeshRef} args={[null, null, capacity]}>
         <sphereGeometry ref={nodeGeometryRef} args={[NODE_RADIUS, NODE_SEGMENTS, NODE_SEGMENTS]} />
-        <meshBasicMaterial ref={nodeMaterialRef} color={colors.node.current} transparent opacity={0.9} />
+        {/* Lit + self-illuminated, so each node reads as a small glowing
+            orb with a highlight and a shaded side rather than a flat disc. */}
+        <meshStandardMaterial
+          ref={nodeMaterialRef}
+          color={colors.node.current}
+          emissive={colors.node.current}
+          emissiveIntensity={0.65}
+          roughness={0.35}
+          metalness={0.1}
+        />
       </instancedMesh>
     </>
   );
