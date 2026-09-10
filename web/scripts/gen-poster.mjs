@@ -908,11 +908,13 @@ function main() {
   } else {
     const options = {
       ...shared,
+      // Defaults are the dark-theme pair (see WorkBackdrop.jsx's
+      // BACKDROP_TUNING); the light poster passes 0.16 / 0.14 explicitly.
       gradientOuter: requireNumber(args, "gradient-outer", 1.1),
       gradientMix: requireNumber(args, "gradient-mix", 0.34),
       blobX: requireNumber(args, "blob-x", 0),
       blobRadius: requireNumber(args, "blob-radius", 0.85),
-      blobAlpha: requireNumber(args, "blob-alpha", 0.14),
+      blobAlpha: requireNumber(args, "blob-alpha", 0.24),
     };
     canvas = generateRadialGlowPoster(options);
     summary = `radial-glow, blob-x ${options.blobX}`;

@@ -112,6 +112,11 @@ export default function Work() {
   // index is in motion. Null whenever the scene is unmounted (reduced
   // motion, off-screen), where the `?.()` call is a harmless no-op.
   const backdropInvalidateRef = useRef(null);
+  // Stable identity so WorkBackdrop's registration effect doesn't churn
+  // (cleanup + re-register) on every unrelated Work re-render.
+  const registerBackdropInvalidate = useCallback((fn) => {
+    backdropInvalidateRef.current = fn;
+  }, []);
 
   const dragRef = useRef({
     active: false,
@@ -405,9 +410,7 @@ export default function Work() {
         <WorkBackdrop
           indexRef={continuousIndexRef}
           length={length}
-          onInvalidateReady={(fn) => {
-            backdropInvalidateRef.current = fn;
-          }}
+          onInvalidateReady={registerBackdropInvalidate}
         />
       </LazyCanvas>
 
