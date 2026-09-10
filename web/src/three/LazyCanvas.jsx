@@ -1,4 +1,4 @@
-import { Children, isValidElement, lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Children, isValidElement, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useInViewport from "../hooks/useInViewport.js";
 import useReducedMotion from "../hooks/useReducedMotion.js";
 import { useTheme } from "../theme/ThemeProvider.jsx";
@@ -23,15 +23,15 @@ const Canvas3D = lazy(() => import("./Canvas3D.jsx"));
  * Shared wrapper for every WebGL scene in the project. Shows `poster`
  * until the wrapper first nears the viewport (per `rootMargin`), then
  * lazily mounts a `<Canvas>` around `children` and KEEPS it mounted for
- * the rest of the session — rendering just pauses (`frameloop="never"`)
- * whenever the scene is scrolled out of view or the tab is hidden.
+ * the rest of the session; it only stops rendering (`frameloop="never"`)
+ * while the whole tab is hidden.
  *
- * (It used to unmount the `<Canvas>` on scroll-away to hold zero WebGL
- * contexts when off-screen. That turned out fragile: recreating a context
- * on scroll-back sometimes came up blank — a stale poster overlay, or the
- * browser's per-page context budget already spent. Four paused contexts
- * for the page's lifetime is well within every browser's limit, and a
- * paused context does no GPU work.)
+ * (It used to unmount the `<Canvas>` on scroll-away, then also tried
+ * toggling `frameloop` off-screen. Both were fragile: a recreated context
+ * on scroll-back could come up blank, and `frameloop` "never" → "always"
+ * did not reliably resume. Four small scenes rendering for the page's
+ * lifetime is cheap and within every browser's context limit. A genuine
+ * context loss re-keys `<Canvas3D>` so r3f rebuilds a fresh one.)
  *
  * `children` must be a scene component that is itself lazy-loaded by its
  * caller (see `Hero.jsx`) — passing a statically-imported scene here would
@@ -73,7 +73,9 @@ export default function LazyCanvas({
   const nearViewport = useInViewport(wrapperRef, { rootMargin, once: false });
   const [tabHidden, setTabHidden] = useState(() => document.hidden);
   const [everInView, setEverInView] = useState(false);
-  const [contextLost, setContextLost] = useState(false);
+  // Bumped when the GL context is lost, which re-keys `<Canvas3D>` so r3f
+  // builds a fresh context instead of leaving a dead canvas.
+  const [remountKey, setRemountKey] = useState(0);
   const { theme } = useTheme();
 
   useEffect(() => {
@@ -82,16 +84,13 @@ export default function LazyCanvas({
     return () => document.removeEventListener("visibilitychange", onVisibilityChange);
   }, []);
 
-  // Both of these are "adjust state when a prop/derived value changes"
-  // (React's documented render-time setState pattern, guarded by a
-  // comparison so it bails out immediately), not effects:
-  //   - `everInView` latches true the first time the scene nears the
-  //     viewport, and the canvas then stays mounted for the session.
-  //   - `contextLost` is optimistically cleared when the scene re-enters
-  //     view — the `webglcontextrestored` event may have been missed while
-  //     the tab was backgrounded.
+  const handleContextLost = useCallback(() => setRemountKey((k) => k + 1), []);
+
+  // `everInView` latches true the first time the scene nears the viewport
+  // (then the canvas stays mounted for the session). This is React's
+  // documented render-time setState pattern — guarded, so it bails out
+  // immediately — not an effect.
   if (nearViewport && !everInView) setEverInView(true);
-  if (nearViewport && contextLost) setContextLost(false);
 
 
   // Dev-only contract check: the docblock above has always said `children`
@@ -126,8 +125,13 @@ export default function LazyCanvas({
   );
 
   const mounted = budget.enabled && everInView;
-  // Pause GPU work whenever the scene isn't actually on screen.
-  const paused = tabHidden || !nearViewport;
+  // Only pause when the tab is actually hidden. Pausing an off-screen
+  // scene by toggling r3f's `frameloop` to "never" turned out not to
+  // reliably resume when the scene scrolled back into view — the whole
+  // reason this component now latch-mounts instead of unmounting. The
+  // scenes are small; four of them rendering is cheap, and the browser
+  // already throttles rAF for a background tab.
+  const paused = tabHidden;
   const posterSrc = theme === "light" ? poster.light : poster.dark;
   const dpr = dprVariant === "backdrop" ? budget.backdropDpr : budget.dpr;
 
@@ -161,16 +165,14 @@ export default function LazyCanvas({
       {mounted ? (
         <Suspense fallback={posterImage}>
           <Canvas3D
+            key={remountKey}
             dpr={dpr}
             paused={paused}
             frameloop={frameloop}
-            onContextLost={setContextLost}
+            onContextLost={handleContextLost}
           >
             {children}
           </Canvas3D>
-          {/* Cover a lost context (which renders blank/white) with the
-              poster until the browser restores it. */}
-          {contextLost ? posterImage : null}
         </Suspense>
       ) : (
         posterImage

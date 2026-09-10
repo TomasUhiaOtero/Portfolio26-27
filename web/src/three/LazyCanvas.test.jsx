@@ -118,7 +118,7 @@ describe("LazyCanvas", () => {
     await waitFor(() => expect(scene(container)).toBeTruthy());
   });
 
-  it("keeps the canvas mounted once it has been in view, but pauses it when it leaves", async () => {
+  it("keeps the canvas mounted (and rendering) once it has been in view, even after it leaves", async () => {
     const { container } = renderLazyCanvas(
       <LazyCanvas poster={POSTER}>
         <div>scene</div>
@@ -129,15 +129,13 @@ describe("LazyCanvas", () => {
     await waitFor(() => expect(scene(container)).toBeTruthy());
     expect(scene(container)).toHaveAttribute("data-paused", "false");
 
-    // Scrolls out of view: the canvas stays in the tree (no context churn)
-    // but rendering pauses.
+    // Scrolls out of view: the canvas stays in the tree AND keeps
+    // rendering — only a hidden tab pauses it (toggling frameloop for
+    // scroll visibility did not reliably resume).
     act(() => observers[0].trigger(false));
-    await waitFor(() => expect(scene(container)).toHaveAttribute("data-paused", "true"));
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(scene(container)).toBeTruthy();
-
-    // Scrolls back: it resumes.
-    act(() => observers[0].trigger(true));
-    await waitFor(() => expect(scene(container)).toHaveAttribute("data-paused", "false"));
+    expect(scene(container)).toHaveAttribute("data-paused", "false");
   });
 
   it("passes the wrapper's own rootMargin through to the observer", () => {

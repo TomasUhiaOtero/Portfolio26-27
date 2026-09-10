@@ -25,6 +25,12 @@ const DPR_STEP = 0.25;
  * regardless of which mode the scene asked for.
  */
 export default function Canvas3D({ dpr, paused, frameloop = "always", onContextLost, children }) {
+  // A lost WebGL context (GPU reset, driver hiccup) leaves the canvas
+  // dead. r3f doesn't rebuild the GL context itself, so the reliable
+  // recovery is to tell the wrapper, which remounts this whole subtree
+  // with a fresh <Canvas>. Nothing fancy here — just forward the event.
+  const handleContextLost = useCallback(() => onContextLost?.(), [onContextLost]);
+
   // `state.dpr` resets `maxDpr` whenever the incoming `dpr` prop changes
   // (e.g. a live reduced-motion flip recomputing the budget upstream).
   // This is React's documented "adjust state when a prop changes"
@@ -45,24 +51,11 @@ export default function Canvas3D({ dpr, paused, frameloop = "always", onContextL
     }));
   }, []);
 
-  // A lost WebGL context (GPU reset, too many live contexts, a
-  // backgrounded tab Chrome reclaimed) leaves the canvas blank — usually
-  // white, since an un-updated material keeps its default colour. Tell the
-  // wrapper so it can cover it with the poster until the context restores.
-  // `onContextLost` is a stable `setState` setter, so this callback's
-  // identity never changes.
   const handleCreated = useCallback(
     (state) => {
-      const canvas = state.gl.domElement;
-      const lost = (event) => {
-        event.preventDefault(); // lets the browser attempt a restore
-        onContextLost?.(true);
-      };
-      const restored = () => onContextLost?.(false);
-      canvas.addEventListener("webglcontextlost", lost);
-      canvas.addEventListener("webglcontextrestored", restored);
+      state.gl.domElement.addEventListener("webglcontextlost", handleContextLost);
     },
-    [onContextLost],
+    [handleContextLost],
   );
 
   return (
