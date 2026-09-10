@@ -36,7 +36,7 @@ const CARD_DURATION = 0.7;
 function JobCard({ entry, side }) {
   return (
     <div
-      className={`rounded-[20px] border border-line bg-surface p-6 sm:p-8 lg:flex lg:flex-col ${
+      className={`metal-card rounded-[20px] border border-white/12 bg-surface p-6 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.5)] sm:p-8 lg:flex lg:flex-col ${
         side === "left" ? "lg:items-end lg:text-right" : "lg:items-start lg:text-left"
       }`}
     >
@@ -58,7 +58,7 @@ function JobCard({ entry, side }) {
 function EducationCard({ entry, side }) {
   return (
     <div
-      className={`rounded-[20px] border border-line bg-surface p-6 sm:p-8 lg:flex lg:flex-col ${
+      className={`metal-card rounded-[20px] border border-white/12 bg-surface p-6 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.5)] sm:p-8 lg:flex lg:flex-col ${
         side === "left" ? "lg:items-end lg:text-right" : "lg:items-start lg:text-left"
       }`}
     >

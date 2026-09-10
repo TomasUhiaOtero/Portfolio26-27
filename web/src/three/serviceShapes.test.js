@@ -3,7 +3,7 @@ import {
   gridLayout,
   gridCoordinate,
   monitorPositions,
-  androidPositions,
+  phonePositions,
   scatteredPositions,
   ringsPositions,
   mixPositions,
@@ -12,7 +12,7 @@ import {
 
 const STATE_GENERATORS = {
   monitor: monitorPositions,
-  android: androidPositions,
+  phone: phonePositions,
   scattered: scatteredPositions,
   rings: ringsPositions,
 };
@@ -78,9 +78,9 @@ describe("gridCoordinate", () => {
 // assert beyond equal length (covered above). What each *should* do is
 // stay inside a sane bounding box — points that fly off make the morph
 // read as an explosion rather than a shape change.
-describe("monitor + android silhouettes", () => {
+describe("monitor + phone silhouettes", () => {
   it("keep every point within a modest bounding box", () => {
-    for (const generate of [monitorPositions, androidPositions]) {
+    for (const generate of [monitorPositions, phonePositions]) {
       const p = generate(640);
       for (let i = 0; i < p.length; i += 1) {
         expect(Math.abs(p[i])).toBeLessThan(2.2);
@@ -97,8 +97,8 @@ describe("monitor + android silhouettes", () => {
     expect(Math.max(...ys)).toBeGreaterThan(0.4);
   });
 
-  it("android is taller than it is wide (a standing figure)", () => {
-    const p = androidPositions(640);
+  it("phone is taller than it is wide (a portrait slab)", () => {
+    const p = phonePositions(640);
     let minX = Infinity;
     let maxX = -Infinity;
     let minY = Infinity;
@@ -184,7 +184,7 @@ describe("mixPositions", () => {
 
   it("never produces NaN or Infinity for any t in [0, 1]", () => {
     const from = monitorPositions(64);
-    const to = androidPositions(64);
+    const to = phonePositions(64);
     for (const t of [0, 0.25, 0.5, 0.75, 1]) {
       expectAllFinite(mixPositions(from, to, t));
     }

@@ -15,7 +15,7 @@ import {
 } from "./colorTransition.js";
 import {
   monitorPositions,
-  androidPositions,
+  phonePositions,
   scatteredPositions,
   ringsPositions,
   mixPositions,
@@ -26,7 +26,7 @@ import {
 // same index straight through as `active` — see this component's docblock
 // for why it reads `activeService`, not the section's lagged
 // `visibleService`.
-const STATE_GENERATORS = [monitorPositions, androidPositions, scatteredPositions, ringsPositions];
+const STATE_GENERATORS = [monitorPositions, phonePositions, scatteredPositions, ringsPositions];
 
 // How long a state change takes to morph, and with what curve — the
 // project's shared entrance easing/duration budget, same precedent

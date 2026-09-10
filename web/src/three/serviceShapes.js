@@ -111,52 +111,59 @@ export function monitorPositions(count, out = new Float32Array(count * 3)) {
 }
 
 // ---------------------------------------------------------------------
-// "android": the Android robot mascot, filled with points — a domed head
-// with two antennae, a rounded body, two arms and two legs. Each vertex
-// is assigned to a body part by `index % PARTS.length` (round-robin, so
-// every part fills evenly at any count) and placed inside that part with
-// a deterministic hash.
+// "android": a smartphone — a filled portrait slab with softened corners,
+// a top speaker slit + camera dot, and a home indicator bar at the
+// bottom. Each vertex is assigned to a part by `index % PARTS.length`
+// (round-robin, so every part fills at any count) and placed inside it
+// with a deterministic hash.
 // ---------------------------------------------------------------------
 
-// Relative share of the vertices given to each part, in round-robin
-// order. Head and body get the most; the limbs are thin.
-const ANDROID_PARTS = ["head", "head", "head", "body", "body", "body", "body", "arm", "leg", "antenna"];
+const PHONE_WIDTH = 0.78;
+const PHONE_HEIGHT = 1.62;
+// Mostly body; a few points spent on the recognisable details.
+const PHONE_PARTS = ["body", "body", "body", "body", "body", "body", "body", "body", "speaker", "home"];
 
-export function androidPositions(count, out = new Float32Array(count * 3)) {
+export function phonePositions(count, out = new Float32Array(count * 3)) {
+  const hw = PHONE_WIDTH / 2;
+  const hh = PHONE_HEIGHT / 2;
+  const corner = 0.16;
+
   for (let i = 0; i < count; i += 1) {
-    const part = ANDROID_PARTS[i % ANDROID_PARTS.length];
+    const part = PHONE_PARTS[i % PHONE_PARTS.length];
     const h1 = hash(i * 1.73 + 0.11);
     const h2 = hash(i * 2.61 + 4.07);
-    const side = hash(i * 3.17 + 8.9) < 0.5 ? -1 : 1;
     let x;
     let y;
 
-    if (part === "head") {
-      // Upper half-disc, flat along the bottom at y ~ 0.28.
-      const r = 0.42 * Math.sqrt(h1);
-      const angle = Math.PI * h2;
-      x = Math.cos(angle) * r;
-      y = 0.3 + Math.sin(angle) * r * 0.92;
-    } else if (part === "antenna") {
-      // Two short stalks angling out from the top of the head.
-      const s = h1;
-      x = side * (0.2 + s * 0.16);
-      y = 0.6 + s * 0.26;
-    } else if (part === "body") {
-      x = (h1 - 0.5) * 0.78;
-      y = -0.56 + h2 * 0.82;
-    } else if (part === "arm") {
-      x = side * (0.47 + h1 * 0.11);
-      y = -0.42 + h2 * 0.52;
+    if (part === "speaker") {
+      // Thin slit + a camera dot just above it, centred near the top.
+      if (h1 < 0.75) {
+        x = (h2 - 0.5) * 0.22;
+        y = hh - 0.12 + (h1 - 0.5) * 0.02;
+      } else {
+        x = (h2 - 0.5) * 0.05;
+        y = hh - 0.2 + (h1 - 0.5) * 0.04;
+      }
+    } else if (part === "home") {
+      x = (h1 - 0.5) * 0.32;
+      y = -hh + 0.09 + (h2 - 0.5) * 0.02;
     } else {
-      // leg
-      x = side * (0.08 + h1 * 0.16);
-      y = -0.86 + h2 * 0.3;
+      // Body: fill the slab, then nudge points out of the corner squares
+      // toward the rounded edge so the silhouette reads as a phone.
+      x = (h1 - 0.5) * PHONE_WIDTH;
+      y = (h2 - 0.5) * PHONE_HEIGHT;
+      const cx = Math.abs(x) - (hw - corner);
+      const cy = Math.abs(y) - (hh - corner);
+      if (cx > 0 && cy > 0 && Math.hypot(cx, cy) > corner) {
+        const k = corner / Math.hypot(cx, cy);
+        x = Math.sign(x) * (hw - corner + cx * k);
+        y = Math.sign(y) * (hh - corner + cy * k);
+      }
     }
 
     out[i * 3] = x;
     out[i * 3 + 1] = y;
-    out[i * 3 + 2] = (hash(i * 4.9 + 1.7) - 0.5) * 0.06;
+    out[i * 3 + 2] = (hash(i * 4.9 + 1.7) - 0.5) * 0.04;
   }
   return out;
 }

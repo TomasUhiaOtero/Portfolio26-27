@@ -30,10 +30,11 @@ export default function ProjectCard({ project, onOpen }) {
       type="button"
       onClick={(event) => onOpen?.(project, event.currentTarget)}
       aria-label={`${title} — ${t.projects.viewProject}`}
-      className="group relative block aspect-[0.86] w-full text-left outline-none transition-transform duration-500 ease-entrance hover:-translate-y-2 focus-visible:-translate-y-2 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-4 focus-visible:ring-offset-bg motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+      className="group relative block aspect-[0.86] w-full cursor-pointer text-left outline-none transition-transform duration-500 ease-entrance hover:-translate-y-2 focus-visible:-translate-y-2 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-4 focus-visible:ring-offset-bg motion-reduce:transition-none motion-reduce:hover:translate-y-0"
     >
-      {/* Photo: behind the folder, rises out of it on hover. */}
-      <span className="absolute inset-x-3 top-0 z-0 block h-[56%] overflow-hidden rounded-2xl transition-transform duration-500 ease-entrance group-hover:-translate-y-[40%] group-hover:scale-[1.03] group-focus-visible:-translate-y-[40%] motion-reduce:!translate-y-0 motion-reduce:!scale-100">
+      {/* Photo: tucked behind the folder at rest, rises clear of it (and
+          in front of it, z-20) on hover so it is never clipped. */}
+      <span className="absolute inset-x-3 top-0 z-0 block h-[56%] overflow-hidden rounded-2xl shadow-xl transition-transform duration-500 ease-entrance group-hover:z-20 group-hover:-translate-y-[52%] group-hover:scale-[1.05] group-focus-visible:z-20 group-focus-visible:-translate-y-[52%] motion-reduce:!translate-y-0 motion-reduce:!scale-100">
         <picture>
           <source srcSet={`${project.image}-1600.avif`} type="image/avif" />
           <source

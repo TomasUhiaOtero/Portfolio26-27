@@ -181,6 +181,45 @@
   }
 }
 
+/* A subtle brushed-metal treatment for the experience/education cards: a
+   fixed top-left-lit gradient sheen, plus a light streak that sweeps
+   across on hover/focus. Streak is disabled under reduced motion. */
+@utility metal-card {
+  position: relative;
+  overflow: hidden;
+  background-image: linear-gradient(
+    150deg,
+    color-mix(in srgb, var(--text) 6%, transparent),
+    transparent 46%
+  );
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    pointer-events: none;
+    background: linear-gradient(
+      115deg,
+      transparent 38%,
+      color-mix(in srgb, var(--text) 16%, transparent) 50%,
+      transparent 62%
+    );
+    transform: translateX(-130%) skewX(-12deg);
+    transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  &:hover::after,
+  &:focus-within::after {
+    transform: translateX(130%) skewX(-12deg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &::after {
+      display: none;
+    }
+  }
+}
+
 /* The project "folder" card: the solid body panel is masked so its
    top-right corner is cut into a file-folder tab dip, and the photo
    layer behind it shows through that cut. `preserveAspectRatio="none"`

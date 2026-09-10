@@ -21,13 +21,17 @@ const Canvas3D = lazy(() => import("./Canvas3D.jsx"));
 
 /**
  * Shared wrapper for every WebGL scene in the project. Shows `poster`
- * until the wrapper nears the viewport (per `rootMargin`), then lazily
- * mounts a `<Canvas>` around `children`; unmounts it again once the
- * wrapper leaves by more than that same margin, so a scene scrolled far
- * out of view stops holding a WebGL context at all — the browser caps how
- * many can be alive at once, and this project has four of these.
+ * until the wrapper first nears the viewport (per `rootMargin`), then
+ * lazily mounts a `<Canvas>` around `children` and KEEPS it mounted for
+ * the rest of the session — rendering just pauses (`frameloop="never"`)
+ * whenever the scene is scrolled out of view or the tab is hidden.
  *
- * Rendering also pauses (without unmounting) while the tab is hidden.
+ * (It used to unmount the `<Canvas>` on scroll-away to hold zero WebGL
+ * contexts when off-screen. That turned out fragile: recreating a context
+ * on scroll-back sometimes came up blank — a stale poster overlay, or the
+ * browser's per-page context budget already spent. Four paused contexts
+ * for the page's lifetime is well within every browser's limit, and a
+ * paused context does no GPU work.)
  *
  * `children` must be a scene component that is itself lazy-loaded by its
  * caller (see `Hero.jsx`) — passing a statically-imported scene here would
@@ -67,15 +71,27 @@ export default function LazyCanvas({
   const wrapperRef = useRef(null);
   const reduced = useReducedMotion();
   const nearViewport = useInViewport(wrapperRef, { rootMargin, once: false });
-  const [paused, setPaused] = useState(() => document.hidden);
+  const [tabHidden, setTabHidden] = useState(() => document.hidden);
+  const [everInView, setEverInView] = useState(false);
   const [contextLost, setContextLost] = useState(false);
   const { theme } = useTheme();
 
   useEffect(() => {
-    const onVisibilityChange = () => setPaused(document.hidden);
+    const onVisibilityChange = () => setTabHidden(document.hidden);
     document.addEventListener("visibilitychange", onVisibilityChange);
     return () => document.removeEventListener("visibilitychange", onVisibilityChange);
   }, []);
+
+  // Both of these are "adjust state when a prop/derived value changes"
+  // (React's documented render-time setState pattern, guarded by a
+  // comparison so it bails out immediately), not effects:
+  //   - `everInView` latches true the first time the scene nears the
+  //     viewport, and the canvas then stays mounted for the session.
+  //   - `contextLost` is optimistically cleared when the scene re-enters
+  //     view — the `webglcontextrestored` event may have been missed while
+  //     the tab was backgrounded.
+  if (nearViewport && !everInView) setEverInView(true);
+  if (nearViewport && contextLost) setContextLost(false);
 
 
   // Dev-only contract check: the docblock above has always said `children`
@@ -109,7 +125,9 @@ export default function LazyCanvas({
     [reduced],
   );
 
-  const mounted = budget.enabled && nearViewport;
+  const mounted = budget.enabled && everInView;
+  // Pause GPU work whenever the scene isn't actually on screen.
+  const paused = tabHidden || !nearViewport;
   const posterSrc = theme === "light" ? poster.light : poster.dark;
   const dpr = dprVariant === "backdrop" ? budget.backdropDpr : budget.dpr;
 
