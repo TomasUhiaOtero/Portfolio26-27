@@ -163,7 +163,7 @@ export const content = {
     },
     footer: {
       rights: "Todos los derechos reservados.",
-      builtWith: "Hecho con React, Vite y Tailwind CSS.",
+      builtWith: "Hecho con React, Vite, Tailwind CSS, GSAP y three.js.",
       backToTop: "Volver arriba",
     },
   },
@@ -298,7 +298,7 @@ export const content = {
     },
     footer: {
       rights: "All rights reserved.",
-      builtWith: "Built with React, Vite and Tailwind CSS.",
+      builtWith: "Built with React, Vite, Tailwind CSS, GSAP and three.js.",
       backToTop: "Back to top",
     },
   },
