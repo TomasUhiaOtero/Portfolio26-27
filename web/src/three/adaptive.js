@@ -19,9 +19,13 @@ const TABLET_BREAKPOINT = 1280;
 // smaller shape the same way it gets fewer hero particles or a smaller
 // TechCore capacity, and so no scene ever hardcodes its own per-device
 // number (see this file's own docblock).
-const PHONE_BUDGET = { particles: 90, stagePoints: 220, dpr: [1, 1.5] };
-const TABLET_BUDGET = { particles: 160, stagePoints: 420, dpr: [1, 1.75] };
-const DESKTOP_BUDGET = { particles: 260, stagePoints: 640, dpr: [1, 2] };
+// Particle counts feed an O(n²) neighbour search every other frame in
+// HeroField — kept deliberately modest so a mid-range GPU holds 60fps
+// with the CSS aurora compositing behind it. dpr ceilings are capped at
+// 1.75 for the same reason (a particle field gains little from 2×).
+const PHONE_BUDGET = { particles: 70, stagePoints: 220, dpr: [1, 1.5] };
+const TABLET_BUDGET = { particles: 120, stagePoints: 420, dpr: [1, 1.6] };
+const DESKTOP_BUDGET = { particles: 175, stagePoints: 640, dpr: [1, 1.75] };
 
 const LOW_MEMORY_THRESHOLD = 4;
 

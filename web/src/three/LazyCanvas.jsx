@@ -118,18 +118,14 @@ export default function LazyCanvas({
   // ResizeObserver behind it only reports *changes* — never recover,
   // leaving the scene rendering into the 300×150 default until an
   // unrelated window resize. `resize={{ offsetSize: true }}` on the Canvas
-  // covers the common case; these post-mount nudges also carry a
-  // re-measure across the async chunk-load boundary (the Canvas element
-  // doesn't exist yet on the first frame after `mounted` flips true).
+  // covers the common case; this dispatches one `resize` a beat after the
+  // scene mounts (by which point the async chunk has loaded and the
+  // wrapper is laid out) to force a clean re-measure. One event per
+  // canvas, once — nothing else listening on `resize` gets churned.
   useEffect(() => {
     if (!mounted) return undefined;
-    const nudge = () => window.dispatchEvent(new Event("resize"));
-    const raf = requestAnimationFrame(nudge);
-    const t = setTimeout(nudge, 300);
-    return () => {
-      cancelAnimationFrame(raf);
-      clearTimeout(t);
-    };
+    const t = setTimeout(() => window.dispatchEvent(new Event("resize")), 200);
+    return () => clearTimeout(t);
   }, [mounted]);
 
   const posterImage = (

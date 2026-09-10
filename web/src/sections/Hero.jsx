@@ -51,11 +51,12 @@ export default function Hero() {
           bundle never executes at all. */}
       <div data-curtain className="fixed inset-0 z-50 bg-bg" />
 
-      {/* Ambient aurora: pure-CSS drifting colour blobs, furthest back, so
-          the hero always has motion and depth even before the particle
-          canvas mounts or if WebGL never runs. Frozen under reduced
-          motion (see styles/index.css). */}
-      <div aria-hidden="true" className="hero-aurora -z-20" />
+      {/* Ambient aurora: pure-CSS drifting colour blobs. Sits ABOVE the
+          particle canvas/poster layer (which is a near-black image and
+          would otherwise hide it) but below the veil and copy, and is
+          semi-transparent so the particles still read through it. Frozen
+          under reduced motion (see styles/index.css). */}
+      <div aria-hidden="true" className="hero-aurora -z-[5]" />
 
       {/* Background layer: its own absolutely-positioned stack, painted
           onto nothing else. Renders the poster until the hero nears the

@@ -44,7 +44,7 @@ const ProjectCard = forwardRef(function ProjectCard(
       aria-label={`${title} — ${t.projects.viewProject}`}
       tabIndex={selected ? 0 : -1}
       onClick={() => onSelect?.(project)}
-      className="absolute inset-0 m-auto h-[320px] w-[220px] cursor-pointer overflow-hidden rounded-[28px] border border-line bg-surface text-left outline-none [backface-visibility:hidden] focus-visible:ring-2 focus-visible:ring-accent md:h-[420px] md:w-[320px]"
+      className="absolute inset-0 m-auto h-[320px] w-[220px] cursor-pointer overflow-hidden rounded-[28px] border border-line bg-surface text-left shadow-[0_24px_70px_-12px_rgba(0,0,0,0.7)] outline-none [backface-visibility:hidden] focus-visible:ring-2 focus-visible:ring-accent md:h-[420px] md:w-[320px]"
       style={{
         transform,
         filter,
@@ -53,7 +53,7 @@ const ProjectCard = forwardRef(function ProjectCard(
         transition: "filter 0.3s ease",
       }}
     >
-      <span className="flex h-full flex-col transition-transform duration-200 ease-out group-hover:-translate-y-1 hover:-translate-y-1">
+      <span className="flex h-full flex-col bg-surface transition-transform duration-200 ease-out group-hover:-translate-y-1 hover:-translate-y-1">
         <picture>
           <source srcSet={`${project.image}-1600.avif`} type="image/avif" />
           <source

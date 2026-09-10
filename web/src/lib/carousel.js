@@ -20,14 +20,16 @@ export function shortestOffset(index, focus, length) {
   return raw > length / 2 ? raw - length : raw;
 }
 
-// Depth is conveyed by blur + brightness, never opacity: a translucent
-// card lets the cards stacked behind it bleed through, which reads as a
-// rendering glitch rather than depth. `dim` is a `brightness()` multiplier
-// (1 = untouched, <1 = pushed back into shadow).
+// Depth is conveyed by blur + brightness + real z separation, never
+// opacity: a translucent card lets the cards stacked behind it bleed
+// through, which reads as a rendering glitch. `dim` is a `brightness()`
+// multiplier (1 = untouched); `push` pulls the ring back along Z and
+// `scale` shrinks it, so a neighbour's inner edge stays firmly *behind*
+// the focused card's plane instead of z-fighting along it.
 const RINGS = [
-  { dim: 1, blur: 0 },
-  { dim: 0.5, blur: 3 },
-  { dim: 0.28, blur: 6 },
+  { dim: 1, blur: 0, push: 0, scale: 1 },
+  { dim: 0.6, blur: 2, push: 140, scale: 0.92 },
+  { dim: 0.34, blur: 5, push: 300, scale: 0.82 },
 ];
 
 /**
@@ -41,9 +43,12 @@ export function cardTransform(offset, { step, radius }) {
   if (ring >= RINGS.length) {
     return { transform: "", dim: 0, blur: 0, hidden: true };
   }
-  const { dim, blur } = RINGS[ring];
+  const { dim, blur, push, scale } = RINGS[ring];
+  // Never let the pull-back cross behind the rotation origin (small mobile
+  // radii would otherwise go negative).
+  const z = Math.max(radius - push, radius * 0.4);
   return {
-    transform: `rotateY(${offset * step}deg) translateZ(${radius}px)`,
+    transform: `rotateY(${offset * step}deg) translateZ(${z}px) scale(${scale})`,
     dim,
     blur,
     hidden: false,

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
 import { getLenis } from "../hooks/useLenis.js";
 import useActiveSection from "../hooks/useActiveSection.js";
@@ -40,8 +40,15 @@ export default function SideRail() {
   const active = useActiveSection(ids);
   const [expanded, setExpanded] = useState(false);
   const navRef = useRef(null);
+  const collapseTimer = useRef(null);
 
-  const expand = useCallback(() => setExpanded(true), []);
+  const expand = useCallback(() => {
+    if (collapseTimer.current) {
+      clearTimeout(collapseTimer.current);
+      collapseTimer.current = null;
+    }
+    setExpanded(true);
+  }, []);
 
   const collapse = useCallback((event) => {
     // A blur/mouseleave that lands on another element still inside the
@@ -56,8 +63,21 @@ export default function SideRail() {
     if (related instanceof Node && navRef.current?.contains(related)) {
       return;
     }
-    setExpanded(false);
+    // The label panel sits a few px away from the bars, outside the nav's
+    // box — moving the pointer across that gap fires `mouseleave` before
+    // the pointer reaches the panel. A short delay (cancelled by the
+    // panel's own `onMouseEnter` via `expand`) bridges it so the panel
+    // stays open long enough to click.
+    if (collapseTimer.current) clearTimeout(collapseTimer.current);
+    collapseTimer.current = setTimeout(() => setExpanded(false), 160);
   }, []);
+
+  useEffect(
+    () => () => {
+      if (collapseTimer.current) clearTimeout(collapseTimer.current);
+    },
+    [],
+  );
 
   const handleSelect = useCallback((id) => {
     const el = document.getElementById(id);
@@ -92,7 +112,9 @@ export default function SideRail() {
       <div
         aria-hidden="true"
         inert={!expanded}
-        className={`absolute bottom-full left-1/2 mb-3 flex origin-bottom -translate-x-1/2 flex-col gap-1 whitespace-nowrap rounded-2xl border border-line bg-surface/60 p-2 backdrop-blur-xl transition-[opacity,transform] duration-200 ease-entrance md:bottom-auto md:left-auto md:right-full md:top-1/2 md:mb-0 md:mr-3 md:origin-right md:-translate-y-1/2 md:translate-x-0 ${
+        onMouseEnter={expand}
+        onMouseLeave={collapse}
+        className={`absolute bottom-full left-1/2 mb-2 flex origin-bottom -translate-x-1/2 flex-col gap-1 whitespace-nowrap rounded-2xl border border-line bg-surface/85 p-2 backdrop-blur-xl transition-[opacity,transform] duration-200 ease-entrance md:bottom-auto md:left-auto md:right-full md:top-1/2 md:mb-0 md:mr-2 md:origin-right md:-translate-y-1/2 md:translate-x-0 ${
           expanded ? "scale-100 opacity-100" : "pointer-events-none scale-95 opacity-0"
         }`}
       >
