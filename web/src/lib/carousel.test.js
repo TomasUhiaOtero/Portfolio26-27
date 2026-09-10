@@ -19,25 +19,31 @@ describe("wrapIndex", () => {
 describe("cardTransform", () => {
   const opts = { step: 26, radius: 560 };
 
-  it("leaves the focused card unrotated, unblurred and at full brightness", () => {
+  it("leaves the focused card unrotated, unscaled and at full brightness", () => {
     const t = cardTransform(0, opts);
     expect(t.dim).toBe(1);
-    expect(t.blur).toBe(0);
     expect(t.transform).toContain("rotateY(0deg)");
+    expect(t.transform).toContain("scale(1)");
   });
 
-  it("rotates, blurs and dims a neighbour — but never makes it translucent", () => {
+  it("rotates, pushes back and dims a neighbour — but never makes it translucent", () => {
     const t = cardTransform(1, opts);
     expect(t.transform).toContain("rotateY(26deg)");
+    expect(t.transform).toMatch(/scale\(0\.\d+\)/);
     expect(t.dim).toBeGreaterThan(0);
     expect(t.dim).toBeLessThan(1);
-    expect(t.blur).toBeGreaterThan(0);
     expect(t).not.toHaveProperty("opacity");
+    expect(t).not.toHaveProperty("blur");
   });
 
-  it("is symmetric in dim/blur for equal distances", () => {
-    expect(cardTransform(-2, opts).dim).toBe(cardTransform(2, opts).dim);
-    expect(cardTransform(-2, opts).blur).toBe(cardTransform(2, opts).blur);
+  it("is symmetric in dim and depth for equal distances", () => {
+    const left = cardTransform(-2, opts);
+    const right = cardTransform(2, opts);
+    expect(left.dim).toBe(right.dim);
+    // Same translateZ and scale on both sides; only the rotateY sign differs.
+    expect(left.transform.replace("rotateY(-52deg)", "")).toBe(
+      right.transform.replace("rotateY(52deg)", ""),
+    );
   });
 
   it("hides cards beyond the third ring so they are never painted", () => {

@@ -31,8 +31,7 @@ const ProjectCard = forwardRef(function ProjectCard(
   const imageAlt = localized(project.imageAlt, lang);
   const chips = project.stack.slice(0, 4);
 
-  const { transform, dim, blur, hidden } = cardTransform(offset, { step, radius });
-  const filter = dim === 1 && blur === 0 ? "none" : `blur(${blur}px) brightness(${dim})`;
+  const { transform, dim, hidden } = cardTransform(offset, { step, radius });
 
   return (
     <button
@@ -47,7 +46,7 @@ const ProjectCard = forwardRef(function ProjectCard(
       className="absolute inset-0 m-auto h-[320px] w-[220px] cursor-pointer overflow-hidden rounded-[28px] border border-line bg-surface text-left shadow-[0_24px_70px_-12px_rgba(0,0,0,0.7)] outline-none [backface-visibility:hidden] focus-visible:ring-2 focus-visible:ring-accent md:h-[420px] md:w-[320px]"
       style={{
         transform,
-        filter,
+        filter: dim === 1 ? "none" : `brightness(${dim})`,
         visibility: hidden ? "hidden" : "visible",
         pointerEvents: hidden ? "none" : "auto",
         transition: "filter 0.3s ease",

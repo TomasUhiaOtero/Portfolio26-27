@@ -21,11 +21,12 @@ const TABLET_BREAKPOINT = 1280;
 // number (see this file's own docblock).
 // Particle counts feed an O(n²) neighbour search every other frame in
 // HeroField — kept deliberately modest so a mid-range GPU holds 60fps
-// with the CSS aurora compositing behind it. dpr ceilings are capped at
-// 1.75 for the same reason (a particle field gains little from 2×).
+// with the CSS aurora compositing behind it. dpr ceilings stay at 1.5:
+// WebGL fill cost scales with dpr², and a soft particle field gains
+// almost nothing visible above 1.5×.
 const PHONE_BUDGET = { particles: 70, stagePoints: 220, dpr: [1, 1.5] };
-const TABLET_BUDGET = { particles: 120, stagePoints: 420, dpr: [1, 1.6] };
-const DESKTOP_BUDGET = { particles: 175, stagePoints: 640, dpr: [1, 1.75] };
+const TABLET_BUDGET = { particles: 120, stagePoints: 420, dpr: [1, 1.5] };
+const DESKTOP_BUDGET = { particles: 170, stagePoints: 640, dpr: [1, 1.5] };
 
 const LOW_MEMORY_THRESHOLD = 4;
 

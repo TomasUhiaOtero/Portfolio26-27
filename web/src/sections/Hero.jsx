@@ -42,7 +42,7 @@ export default function Hero() {
     <section
       id="inicio"
       ref={rootRef}
-      className="relative flex min-h-screen flex-col overflow-hidden bg-bg"
+      className="relative isolate flex min-h-screen flex-col overflow-hidden bg-bg"
     >
       {/* The curtain: opaque until the entrance timeline fades it out (or
           reduced motion dismisses it instantly). It is never marked

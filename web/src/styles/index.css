@@ -88,31 +88,27 @@
 
 /* Hero ambient background: a soft moving field of colour behind the
    particle canvas, so the hero reads as immersive even before — or
-   without — WebGL. Pure CSS, GPU-composited (transform/opacity only),
-   motion frozen under reduced motion. Two large blobs kept off the
-   left third (where the headline sits) plus a faint always-on top glow
-   on the container itself. */
+   without — WebGL. Radial gradients already have a soft falloff, so no
+   `filter: blur()` (a large blur radius on a viewport-sized layer is the
+   single most expensive thing you can animate). Only `transform`/
+   `opacity` move; motion is frozen under reduced motion. */
 @keyframes hero-aurora-a {
   0%,
   100% {
     transform: translate3d(0, 0, 0) scale(1);
-    opacity: 0.5;
   }
   50% {
-    transform: translate3d(-18%, 14%, 0) scale(1.35);
-    opacity: 0.72;
+    transform: translate3d(-12%, 10%, 0) scale(1.25);
   }
 }
 
 @keyframes hero-aurora-b {
   0%,
   100% {
-    transform: translate3d(0, 0, 0) scale(1.2);
-    opacity: 0.4;
+    transform: translate3d(0, 0, 0) scale(1.15);
   }
   50% {
-    transform: translate3d(16%, -18%, 0) scale(0.9);
-    opacity: 0.6;
+    transform: translate3d(12%, -12%, 0) scale(0.92);
   }
 }
 
@@ -121,43 +117,47 @@
   inset: 0;
   overflow: hidden;
   pointer-events: none;
-  /* Always-on faint wash from the top so the hero is never pure black
-     even with both blobs mid-drift or motion disabled. */
-  background: radial-gradient(
-    120% 90% at 70% 0%,
-    color-mix(in srgb, var(--accent) 18%, transparent),
-    transparent 62%
-  );
+  /* Base wash: two fixed radial pools so the hero is never flat black,
+     even with motion disabled or the blobs mid-drift. */
+  background:
+    radial-gradient(
+      70% 55% at 78% 12%,
+      color-mix(in srgb, var(--accent) 42%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      65% 60% at 20% 95%,
+      color-mix(in srgb, var(--glow) 34%, transparent),
+      transparent 70%
+    );
 
   &::before,
   &::after {
     content: "";
     position: absolute;
-    width: 70vw;
-    height: 70vw;
-    min-width: 520px;
-    min-height: 520px;
+    width: 60vw;
+    height: 60vw;
+    min-width: 460px;
+    min-height: 460px;
     border-radius: 50%;
-    filter: blur(64px);
-    will-change: transform, opacity;
   }
 
-  /* Accent blob: upper-right, so it never sits under the blue "full-stack". */
+  /* Accent blob: upper-right, drifting. */
   &::before {
-    top: -14%;
-    right: -6%;
-    background: radial-gradient(circle, var(--accent) 0%, transparent 62%);
-    opacity: 0.5;
-    animation: hero-aurora-a 26s ease-in-out infinite;
+    top: -18%;
+    right: -8%;
+    background: radial-gradient(circle, var(--accent) 0%, transparent 60%);
+    opacity: 0.4;
+    animation: hero-aurora-a 28s ease-in-out infinite;
   }
 
-  /* Glow blob: lower area, drifting under and to the right of the copy. */
+  /* Glow blob: lower, drifting the other way. */
   &::after {
-    right: 4%;
-    bottom: -20%;
-    background: radial-gradient(circle, var(--glow) 0%, transparent 62%);
-    opacity: 0.4;
-    animation: hero-aurora-b 34s ease-in-out infinite;
+    right: 2%;
+    bottom: -24%;
+    background: radial-gradient(circle, var(--glow) 0%, transparent 60%);
+    opacity: 0.34;
+    animation: hero-aurora-b 36s ease-in-out infinite;
   }
 
   @media (prefers-reduced-motion: reduce) {
