@@ -111,111 +111,19 @@ export function monitorPositions(count, out = new Float32Array(count * 3)) {
 }
 
 // ---------------------------------------------------------------------
-// "android": a smartphone. ~62% of the points draw a bright outline
-// (a rounded-rectangle body, a pill "notch" near the top and a short
-// "home" bar at the bottom); the rest lightly fill the screen area and
-// are pushed back in z, so the outline reads as a raised bezel around a
-// recessed screen. An outline plus a couple of unmistakable details
-// reads as a phone far more clearly than a uniformly filled slab.
+// "android": a plain vertical rectangle — the points evenly fill a
+// portrait slab via the shared grid, all at z = 0. Nothing fancy.
 // ---------------------------------------------------------------------
 
-const PHONE_HALF_W = 0.42;
-const PHONE_HALF_H = 0.86;
-const PHONE_CORNER = 0.16;
-const PHONE_BEZEL_Z = 0.14;
-
-// Point on the rounded-rectangle perimeter at parameter `s` in [0, 1),
-// walking clockwise from the top-left corner. Straight runs and quarter
-// arcs are length-weighted so points spread evenly around the outline.
-function roundedRectPerimeter(s) {
-  const w = 2 * (PHONE_HALF_W - PHONE_CORNER);
-  const h = 2 * (PHONE_HALF_H - PHONE_CORNER);
-  const arc = (Math.PI / 2) * PHONE_CORNER;
-  const total = 2 * w + 2 * h + 4 * arc;
-  let d = s * total;
-
-  const segs = [
-    { len: w, kind: "top" },
-    { len: arc, kind: "tr" },
-    { len: h, kind: "right" },
-    { len: arc, kind: "br" },
-    { len: w, kind: "bottom" },
-    { len: arc, kind: "bl" },
-    { len: h, kind: "left" },
-    { len: arc, kind: "tl" },
-  ];
-
-  for (const seg of segs) {
-    if (d <= seg.len) {
-      const f = seg.len > 0 ? d / seg.len : 0;
-      const ix = PHONE_HALF_W - PHONE_CORNER;
-      const iy = PHONE_HALF_H - PHONE_CORNER;
-      switch (seg.kind) {
-        case "top":
-          return [-ix + f * w, PHONE_HALF_H];
-        case "bottom":
-          return [ix - f * w, -PHONE_HALF_H];
-        case "right":
-          return [PHONE_HALF_W, iy - f * h];
-        case "left":
-          return [-PHONE_HALF_W, -iy + f * h];
-        case "tr":
-          return [ix + Math.sin(f * (Math.PI / 2)) * PHONE_CORNER, iy + Math.cos(f * (Math.PI / 2)) * PHONE_CORNER];
-        case "br":
-          return [ix + Math.cos(f * (Math.PI / 2)) * PHONE_CORNER, -iy - Math.sin(f * (Math.PI / 2)) * PHONE_CORNER];
-        case "bl":
-          return [-ix - Math.sin(f * (Math.PI / 2)) * PHONE_CORNER, -iy - Math.cos(f * (Math.PI / 2)) * PHONE_CORNER];
-        default: // "tl"
-          return [-ix - Math.cos(f * (Math.PI / 2)) * PHONE_CORNER, iy + Math.sin(f * (Math.PI / 2)) * PHONE_CORNER];
-      }
-    }
-    d -= seg.len;
-  }
-  return [0, 0];
-}
+const PHONE_WIDTH = 0.8;
+const PHONE_HEIGHT = 1.7;
 
 export function phonePositions(count, out = new Float32Array(count * 3)) {
-  const outlineCount = Math.max(1, Math.floor(count * 0.62));
-  const notchStart = outlineCount;
-  const notchCount = Math.max(0, Math.floor(count * 0.08));
-  const homeStart = notchStart + notchCount;
-  const homeCount = Math.max(0, Math.floor(count * 0.06));
-
   for (let i = 0; i < count; i += 1) {
-    let x;
-    let y;
-    let z = 0;
-
-    if (i < outlineCount) {
-      // Evenly spaced around the body outline (a golden-ratio step keeps
-      // it even for any count), with a hair of jitter for life.
-      const s = (i * 0.61803398875) % 1;
-      [x, y] = roundedRectPerimeter(s);
-      x += (hash(i * 5.1) - 0.5) * 0.015;
-      y += (hash(i * 6.3) - 0.5) * 0.015;
-      z = PHONE_BEZEL_Z;
-    } else if (i < homeStart) {
-      // The pill notch near the top.
-      const j = i - notchStart;
-      x = (hash(j * 1.9 + 0.2) - 0.5) * 0.24;
-      y = PHONE_HALF_H - 0.11 + (hash(j * 2.4 + 1.1) - 0.5) * 0.03;
-      z = PHONE_BEZEL_Z;
-    } else if (i < homeStart + homeCount) {
-      // The home indicator bar near the bottom.
-      const j = i - homeStart;
-      x = (hash(j * 1.7 + 0.4) - 0.5) * 0.3;
-      y = -PHONE_HALF_H + 0.07 + (hash(j * 2.2 + 2.3) - 0.5) * 0.02;
-      z = PHONE_BEZEL_Z;
-    } else {
-      // Sparse screen fill, recessed at z = 0 behind the bezel.
-      const j = i - homeStart - homeCount;
-      x = (hash(j * 1.3 + 0.7) - 0.5) * (PHONE_HALF_W * 1.7);
-      y = (hash(j * 2.9 + 3.1) - 0.5) * (PHONE_HALF_H * 1.7);
-    }
-
-    out[i * 3] = x;
-    out[i * 3 + 1] = y;
-    out[i * 3 + 2] = z + (hash(i * 4.9 + 1.7) - 0.5) * 0.02;
+    const { u, v } = gridCoordinate(i, count);
+    out[i * 3] = (u - 0.5) * PHONE_WIDTH;
+    out[i * 3 + 1] = (v - 0.5) * PHONE_HEIGHT;
+    out[i * 3 + 2] = 0;
   }
   return out;
 }
