@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { renderWithProviders } from "../test/renderWithProviders.jsx";
-import { projects } from "../data/projects.js";
+import { projects, projectsByFilter, localized } from "../data/projects.js";
 import { content, DEFAULT_LANGUAGE } from "../data/content.js";
 import Work from "./Work.jsx";
 
@@ -9,13 +9,11 @@ const t = content[DEFAULT_LANGUAGE];
 
 const realMatchMedia = window.matchMedia;
 
-// Same technique as About/Services/Experience.test.jsx: jsdom's own
-// matchMedia stub always reports `matches: false`, so `prefers-reduced-
-// motion` has to be faked this way to actually exercise either branch —
-// documented tooling limit, repeated in every section's tests.
-function mockMatchMedia({ reducedMotion = false, desktop = true } = {}) {
+// jsdom's matchMedia stub always reports matches:false; fake
+// prefers-reduced-motion so Reveal shows its content immediately.
+function mockReducedMotion(matches) {
   window.matchMedia = (query) => ({
-    matches: query.includes("prefers-reduced-motion") ? reducedMotion : desktop,
+    matches: matches && query.includes("prefers-reduced-motion"),
     media: query,
     addEventListener() {},
     removeEventListener() {},
@@ -23,10 +21,7 @@ function mockMatchMedia({ reducedMotion = false, desktop = true } = {}) {
 }
 
 describe("Work", () => {
-  beforeEach(() => {
-    mockMatchMedia({ reducedMotion: true });
-  });
-
+  beforeEach(() => mockReducedMotion(true));
   afterEach(() => {
     window.matchMedia = realMatchMedia;
   });
@@ -36,45 +31,50 @@ describe("Work", () => {
     expect(container.querySelector("section#proyectos")).toBeInTheDocument();
   });
 
-  it("puts all eight projects in the DOM, each as a button", () => {
+  it("shows every project as a button by default (filter = all)", () => {
     renderWithProviders(<Work />);
-    const options = screen.getAllByRole("option", { hidden: true });
-    expect(options).toHaveLength(projects.length);
-    for (const option of options) {
-      expect(option.tagName).toBe("BUTTON");
+    const grid = screen.getByRole("list");
+    const cards = within(grid).getAllByRole("button");
+    expect(cards).toHaveLength(projects.length);
+    for (const project of projects) {
+      const label = new RegExp(localized(project.title, DEFAULT_LANGUAGE));
+      expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
     }
   });
 
-  it("selects the first card initially", () => {
+  it("renders one filter pill per filter key, 'all' pressed initially", () => {
     renderWithProviders(<Work />);
-    const options = screen.getAllByRole("option", { hidden: true });
-    expect(options[0]).toHaveAttribute("aria-selected", "true");
-    expect(options.slice(1).every((el) => el.getAttribute("aria-selected") === "false")).toBe(
-      true,
+    const group = screen.getByRole("group", { name: t.projects.filterLabel });
+    const pills = within(group).getAllByRole("button");
+    expect(pills.map((p) => p.textContent)).toEqual([
+      t.projects.filters.all,
+      t.projects.filters.frontend,
+      t.projects.filters.backend,
+      t.projects.filters.ia,
+    ]);
+    expect(within(group).getByRole("button", { name: t.projects.filters.all })).toHaveAttribute(
+      "aria-pressed",
+      "true",
     );
   });
 
-  it("moves the selection when ArrowRight is pressed", () => {
+  it("narrows the grid to the chosen area when a filter pill is clicked", () => {
     renderWithProviders(<Work />);
-    const listbox = screen.getByRole("listbox", { name: t.projects.title });
-    const options = screen.getAllByRole("option", { hidden: true });
+    const group = screen.getByRole("group", { name: t.projects.filterLabel });
 
-    expect(options[0]).toHaveAttribute("aria-selected", "true");
+    fireEvent.click(within(group).getByRole("button", { name: t.projects.filters.ia }));
 
-    fireEvent.keyDown(listbox, { key: "ArrowRight" });
+    const expected = projectsByFilter("ia");
+    expect(expected.length).toBeGreaterThan(0);
+    expect(expected.length).toBeLessThan(projects.length);
 
-    const optionsAfter = screen.getAllByRole("option", { hidden: true });
-    expect(optionsAfter[0]).toHaveAttribute("aria-selected", "false");
-    expect(optionsAfter[1]).toHaveAttribute("aria-selected", "true");
-  });
-
-  it("moves focus and selection together on ArrowRight", () => {
-    renderWithProviders(<Work />);
-    const listbox = screen.getByRole("listbox", { name: t.projects.title });
-
-    fireEvent.keyDown(listbox, { key: "ArrowRight" });
-
-    const optionsAfter = screen.getAllByRole("option", { hidden: true });
-    expect(optionsAfter[1]).toHaveAttribute("tabIndex", "0");
+    const grid = screen.getByRole("list");
+    expect(within(grid).getAllByRole("button")).toHaveLength(expected.length);
+    for (const project of expected) {
+      expect(project.categories).toContain("ia");
+    }
+    expect(
+      within(group).getByRole("button", { name: t.projects.filters.ia }),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 });

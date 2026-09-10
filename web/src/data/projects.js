@@ -13,6 +13,7 @@
 export const projects = [
   {
     id: "tomasdex",
+    categories: ["frontend", "ia"],
     featured: true,
     image: "/img/tomasdex",
     imageAlt: {
@@ -36,6 +37,7 @@ export const projects = [
   },
   {
     id: "kairos",
+    categories: ["frontend", "backend"],
     featured: true,
     image: "/img/kairos",
     imageAlt: {
@@ -59,6 +61,7 @@ export const projects = [
   },
   {
     id: "asistente-ia",
+    categories: ["ia", "backend"],
     featured: true,
     image: "/img/asistente-ia",
     imageAlt: {
@@ -84,6 +87,7 @@ export const projects = [
   /* --- Rejilla secundaria --- */
   {
     id: "topmusic",
+    categories: ["frontend"],
     featured: false,
     image: "/img/topmusic",
     imageAlt: {
@@ -102,6 +106,7 @@ export const projects = [
   },
   {
     id: "starwars-api",
+    categories: ["backend"],
     featured: false,
     image: "/img/starwars-api",
     imageAlt: {
@@ -120,6 +125,7 @@ export const projects = [
   },
   {
     id: "conversor",
+    categories: ["frontend"],
     featured: false,
     image: "/img/conversor",
     imageAlt: {
@@ -141,6 +147,7 @@ export const projects = [
   },
   {
     id: "springboot-libreria",
+    categories: ["backend"],
     featured: false,
     image: "/img/springboot-libreria",
     imageAlt: {
@@ -162,6 +169,7 @@ export const projects = [
   },
   {
     id: "tres-en-raya",
+    categories: ["frontend"],
     featured: false,
     image: "/img/tres-en-raya",
     imageAlt: {
@@ -184,6 +192,16 @@ export const projects = [
     code: "https://github.com/TomasUhiaOtero/Practice",
   },
 ];
+
+
+/** Filter keys for the Work section. `all` shows everything. */
+export const PROJECT_FILTERS = ["all", "frontend", "backend", "ia"];
+
+/** Projects whose `categories` include `filter` (every project for "all"). */
+export function projectsByFilter(filter) {
+  if (!filter || filter === "all") return projects;
+  return projects.filter((p) => p.categories?.includes(filter));
+}
 
 export const featuredProjects = projects.filter((p) => p.featured);
 export const otherProjects = projects.filter((p) => !p.featured);

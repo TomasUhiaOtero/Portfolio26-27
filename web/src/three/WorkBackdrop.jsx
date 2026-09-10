@@ -7,9 +7,7 @@ import {
   makeColorTransition,
   startColorTransition,
   tickColorTransition,
-  isColorTransitionActive,
 } from "./colorTransition.js";
-import { blobPosition } from "./workBackdrop.js";
 
 // A full-screen-triangle-pair trick, not a camera-projected plane: the
 // vertex shader writes `position.xy` (already in [-1, 1], see
@@ -28,11 +26,8 @@ const VERTEX_SHADER = /* glsl */ `
 
 // `uAccent`/`uGlow`/`uBg` are lerped CPU-side every frame (see `useFrame`
 // below) and simply read here — same division of labour as every other
-// scene's colour uniforms. The gradient is spatial (centre-to-edge), not
-// time-animated: "slow" describes how gradual the falloff reads, not a
-// clock-driven cycle, which is also what keeps `frameloop="demand"`
-// meaningful here (see this file's own docblock) — nothing needs to repaint
-// on its own, only when a colour or the blob's position actually changes.
+// scene's colour uniforms. The radial gradient is spatial (centre-to-edge);
+// only the light blob moves, on a slow sine.
 const FRAGMENT_SHADER = /* glsl */ `
   precision mediump float;
   uniform vec3 uAccent;
@@ -58,7 +53,7 @@ const FRAGMENT_SHADER = /* glsl */ `
     vec3 color = mix(uBg, gradient, uMix);
 
     // The soft light blob: horizontal position tracks uBlobX (-1..1,
-    // see blobPosition in workBackdrop.js), vertically centred.
+    // driven by a slow sine), vertically centred.
     vec2 blobCenter = vec2(uBlobX * aspect * 0.45, 0.0);
     float blobDist = length(p - blobCenter);
     float blob = smoothstep(0.85, 0.0, blobDist);
@@ -85,56 +80,18 @@ const BACKDROP_TUNING = {
 };
 
 /**
- * The projects carousel's backdrop: a full-bleed fragment shader behind
- * `Work.jsx`'s DOM carousel (never instead of it — see that file's own
- * docblock on why the cards themselves stay real DOM elements). Valid only
- * as a child of `<LazyCanvas>`, exactly like `HeroField`/`TechCore`/
- * `ServiceStage`.
- *
- * Reads the carousel's continuous (float) focus index as `indexRef` — a
- * ref, not a prop or state, and read directly inside `useFrame`, never
- * written from here. Same "hazard 4" discipline `TechCore.jsx` established
- * for its own externally-driven `progressRef`: `Work.jsx`'s own rAF loop
- * (Task 13) already owns writing that value every frame while dragging or
- * settling, so this scene has no business subscribing to it as React state
- * — that would mean a re-render (and a fresh shader-uniform write through
- * React) on every single animation frame of a drag.
- *
- * `frameloop="demand"`: unlike the other three scenes, nothing here needs
- * to repaint on a fixed clock — the gradient is static except for a colour
- * lerp on theme change, and the blob only moves when `indexRef` moves. So
- * `LazyCanvas`'s `frameloop="demand"` (Task 15's only caller of that mode)
- * means this canvas renders zero frames while the carousel sits idle. The
- * `useFrame` loop below is responsible for calling `invalidate()` itself
- * whenever colours are still lerping or the index is still moving, and for
- * NOT calling it once both have settled — that's what actually saves the
- * frames "demand" mode exists to save, rather than defeating the point by
- * invalidating unconditionally every tick.
+ * The projects section's ambient backdrop: a full-bleed fragment shader
+ * behind `Work.jsx`'s DOM grid — a soft radial gradient between `--accent`
+ * and `--glow` over `--bg`, plus a slow drifting light blob. Valid only as
+ * a child of `<LazyCanvas>`, exactly like `HeroField`/`TechCore`/
+ * `ServiceStage`. Self-contained: it drifts on its own clock (no external
+ * index to follow) and lerps its colours on a theme change.
  */
-export default function WorkBackdrop({ indexRef, length, onInvalidateReady }) {
+export default function WorkBackdrop() {
   const { theme } = useTheme();
-  const invalidate = useThree((state) => state.invalidate);
   const size = useThree((state) => state.size);
 
-  // Hand `invalidate` up to Work.jsx so its own rAF (which drives
-  // `indexRef` during a drag/settle without re-rendering) can wake this
-  // demand-mode canvas frame by frame — see Work.jsx's own comment on
-  // `backdropInvalidateRef`. Cleared on unmount so the caller's `?.()`
-  // becomes a no-op rather than poking a dead root.
-  useEffect(() => {
-    onInvalidateReady?.(invalidate);
-    return () => onInvalidateReady?.(null);
-  }, [onInvalidateReady, invalidate]);
-
   const materialRef = useRef(null);
-  // Starts at 0 rather than `indexRef.current` — reading a ref's `.current`
-  // during render is disallowed (react-hooks' `refs` rule; refs only exist
-  // to be read outside render, in effects/callbacks). If the carousel isn't
-  // actually at index 0 on mount, the very first `useFrame` tick below
-  // simply sees a "moved" index and calls `invalidate()` once more than
-  // strictly necessary — harmless, and it runs before that frame's pixels
-  // are ever drawn.
-  const lastIndexRef = useRef(0);
 
   // Colours read once from computed styles and lerped toward a new target
   // on theme change, via the shared colorTransition.js helper — never
@@ -163,19 +120,10 @@ export default function WorkBackdrop({ indexRef, length, onInvalidateReady }) {
       startColorTransition(colors.accent, accent, now);
       startColorTransition(colors.glow, glow, now);
       startColorTransition(colors.bg, readBgColor(), now);
-      // `frameloop="demand"` means nothing repaints on its own — kick the
-      // loop so the lerp this just started is actually visible next frame,
-      // and useFrame's own re-invalidate (below) carries it the rest of
-      // the way while it's still in flight.
-      invalidate();
     });
     return () => cancelAnimationFrame(raf);
-  }, [theme, colors, invalidate]);
+  }, [theme, colors]);
 
-  // `uBlobX` starts at 0 rather than `blobPosition(indexRef.current, ...)`
-  // for the same reason `lastIndexRef` does above: reading `indexRef.current`
-  // during render is disallowed. The first `useFrame` tick corrects it
-  // before that frame's pixels are ever drawn.
   const uniforms = useMemo(
     () => ({
       uAccent: { value: new THREE.Color() },
@@ -198,35 +146,26 @@ export default function WorkBackdrop({ indexRef, length, onInvalidateReady }) {
     [],
   );
 
-  // Canvas resize (a real prop/size change r3f itself tracks) already
-  // triggers a frame on its own even in demand mode, but the resolution
-  // uniform still has to be kept current for the next paint either way.
+  // Keep the resolution uniform current on canvas resize.
   useEffect(() => {
     uniforms.uResolution.value.set(size.width, size.height);
   }, [size, uniforms]);
 
   // Per-theme mix/blob strength. Snapped, not lerped: the change is tiny
-  // (0.16 <-> 0.34), the layer is at -z-10 and mostly occluded by cards,
-  // and it lands inside the 400ms colour cross-fade the theme flip already
-  // kicks off — a separate eased ramp for it would be imperceptible.
-  // Written through the live material (a ref), not the memoised `uniforms`
-  // object, so it's a mutation of an owned mutable, same as the resize
-  // effect's `.value.set()` above.
+  // (0.16 <-> 0.34) and lands inside the 400ms colour cross-fade the theme
+  // flip already kicks off. Written through the live material (a ref), not
+  // the memoised `uniforms` object.
   useEffect(() => {
     const material = materialRef.current;
     if (!material) return;
     const tuning = BACKDROP_TUNING[theme] ?? BACKDROP_TUNING.dark;
     material.uniforms.uMix.value = tuning.mix;
     material.uniforms.uBlobAlpha.value = tuning.blobAlpha;
-    invalidate();
-  }, [theme, invalidate]);
+  }, [theme]);
 
-  // The one per-frame loop — reads `indexRef.current` and the colour
-  // transitions, writes uniforms, and decides whether to chain another
-  // frame. Nothing here ever calls `setState`: `indexRef` is only ever
-  // read (see this file's own docblock), and the colour lerps are advanced
-  // by `tickColorTransition` mutating plain objects, exactly like
-  // HeroField.jsx/TechCore.jsx/ServiceStage.jsx.
+  // Per-frame loop: advance the colour lerps and drift the blob on a slow
+  // sine. No `setState` — the colour lerps mutate plain objects in place,
+  // exactly like HeroField.jsx/TechCore.jsx/ServiceStage.jsx.
   useFrame(() => {
     const material = materialRef.current;
     if (!material) return;
@@ -235,22 +174,7 @@ export default function WorkBackdrop({ indexRef, length, onInvalidateReady }) {
     material.uniforms.uAccent.value.copy(tickColorTransition(colors.accent, now));
     material.uniforms.uGlow.value.copy(tickColorTransition(colors.glow, now));
     material.uniforms.uBg.value.copy(tickColorTransition(colors.bg, now));
-
-    const currentIndex = indexRef.current ?? 0;
-    material.uniforms.uBlobX.value = blobPosition(currentIndex, length);
-
-    const indexMoving = Math.abs(currentIndex - lastIndexRef.current) > 1e-4;
-    lastIndexRef.current = currentIndex;
-
-    const colorsAnimating =
-      isColorTransitionActive(colors.accent, now) ||
-      isColorTransitionActive(colors.glow, now) ||
-      isColorTransitionActive(colors.bg, now);
-
-    // Chain the next frame only while something is genuinely still
-    // changing — the whole reason this scene asked for `frameloop="demand"`
-    // rather than "always" (see the component docblock).
-    if (indexMoving || colorsAnimating) invalidate();
+    material.uniforms.uBlobX.value = Math.sin(now * 0.00013);
   });
 
   // Belt-and-suspenders GPU cleanup, matching every prior scene's

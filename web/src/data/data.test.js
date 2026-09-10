@@ -88,6 +88,15 @@ describe("projects", () => {
       expect(p.demo || p.code).toBeTruthy();
     }
   });
+
+  it("tags every project with at least one known area category", () => {
+    const known = new Set(["frontend", "backend", "ia"]);
+    for (const p of projects) {
+      expect(Array.isArray(p.categories)).toBe(true);
+      expect(p.categories.length).toBeGreaterThan(0);
+      for (const c of p.categories) expect(known.has(c)).toBe(true);
+    }
+  });
 });
 
 describe("localized", () => {

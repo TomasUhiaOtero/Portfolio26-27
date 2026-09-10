@@ -80,6 +80,8 @@ export const content = {
       close: "Cerrar",
       prev: "Proyecto anterior",
       next: "Proyecto siguiente",
+      filterLabel: "Filtrar por área",
+      filters: { all: "Todos", frontend: "Frontend", backend: "Backend", ia: "IA" },
     },
     experience: {
       eyebrow: "Trayectoria",
@@ -223,6 +225,8 @@ export const content = {
       close: "Close",
       prev: "Previous project",
       next: "Next project",
+      filterLabel: "Filter by area",
+      filters: { all: "All", frontend: "Frontend", backend: "Backend", ia: "AI" },
     },
     experience: {
       eyebrow: "Background",

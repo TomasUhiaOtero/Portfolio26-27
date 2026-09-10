@@ -172,6 +172,20 @@
   }
 }
 
+/* The project "folder" card: the solid body panel is masked so its
+   top-right corner is cut into a file-folder tab dip, and the photo
+   layer behind it shows through that cut. `preserveAspectRatio="none"`
+   + `mask-size: 100% 100%` scales the shape to any card size. */
+@utility folder-clip {
+  --folder-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 400' preserveAspectRatio='none'%3E%3Cpath d='M24 0H176c8 0 13 4 17 11l12 21c4 7 11 12 20 12h71c13 0 24 11 24 24v308c0 13-11 24-24 24H24C11 400 0 389 0 376V24C0 11 11 0 24 0Z' fill='%23000'/%3E%3C/svg%3E");
+  -webkit-mask-image: var(--folder-mask);
+  mask-image: var(--folder-mask);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
 /* `inline` makes the generated utilities resolve `var(--bg)` at use time,
    so `bg-bg` follows the theme without regenerating any CSS. */
 @theme inline {

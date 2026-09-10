@@ -1,58 +1,39 @@
-import { forwardRef } from "react";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
 import { localized } from "../data/projects.js";
-import { cardTransform } from "../lib/carousel.js";
-import Chip from "./Chip.jsx";
+
+const CATEGORY_ORDER = ["frontend", "backend", "ia"];
 
 /**
- * One card in the projects arc carousel. A thin wrapper around
- * `cardTransform` (the pure geometry in `lib/carousel.js`) — this
- * component's only job is turning that result into markup and style.
+ * One project as a "folder" card: a photo tucked behind a solid body
+ * panel whose top-right corner is cut into a file-folder tab (see
+ * `.folder-clip` in styles/index.css). At rest only a strip of the photo
+ * shows above the folder; on hover (or keyboard focus) the whole card
+ * lifts and the photo slides up out of the folder. Activating it opens
+ * the detail overlay via `onOpen(project, element)` — the element is the
+ * origin for the overlay's shared-element transition.
  *
- * A real `<button>`, not a `div` with an `onClick`: it is focusable,
- * activates on Enter/Space for free, and gives `role="option"` something
- * legitimate to sit on. The hover lift lives on the inner `<span>` so it
- * never fights the button's own `cardTransform`-driven 3D transform.
- *
- * Ruling R5 (see progress.md): cards outside the visible rings stay
- * mounted — `cardTransform`'s `hidden` flag means "not painted", not "not
- * rendered". `visibility: hidden` (not `display: none`/unmount) keeps
- * them in the DOM and out of the accessibility tree and tab order, so a
- * card never has to be created mid-flight as the spring carries it into
- * view, and `Work.test.jsx` can still find all eight.
+ * A real `<button>`: focusable, Enter/Space for free. All motion is
+ * `transform`-only and disabled under `prefers-reduced-motion`.
  */
-const ProjectCard = forwardRef(function ProjectCard(
-  { project, offset, selected = false, onSelect, step = 26, radius = 560 },
-  ref,
-) {
+export default function ProjectCard({ project, onOpen }) {
   const { lang, t } = useLanguage();
   const title = localized(project.title, lang);
   const tagline = localized(project.tagline, lang);
   const imageAlt = localized(project.imageAlt, lang);
-  const chips = project.stack.slice(0, 4);
 
-  const { transform, dim, hidden } = cardTransform(offset, { step, radius });
+  const cats = CATEGORY_ORDER.filter((c) => project.categories?.includes(c))
+    .map((c) => t.projects.filters[c])
+    .join(" · ");
 
   return (
     <button
-      ref={ref}
       type="button"
-      role="option"
-      aria-selected={selected}
-      aria-hidden={hidden || undefined}
+      onClick={(event) => onOpen?.(project, event.currentTarget)}
       aria-label={`${title} — ${t.projects.viewProject}`}
-      tabIndex={selected ? 0 : -1}
-      onClick={() => onSelect?.(project)}
-      className="absolute inset-0 m-auto h-[320px] w-[220px] cursor-pointer overflow-hidden rounded-[28px] border border-line bg-surface text-left shadow-[0_24px_70px_-12px_rgba(0,0,0,0.7)] outline-none [backface-visibility:hidden] focus-visible:ring-2 focus-visible:ring-accent md:h-[420px] md:w-[320px]"
-      style={{
-        transform,
-        filter: dim === 1 ? "none" : `brightness(${dim})`,
-        visibility: hidden ? "hidden" : "visible",
-        pointerEvents: hidden ? "none" : "auto",
-        transition: "filter 0.3s ease",
-      }}
+      className="group relative block aspect-[0.86] w-full text-left outline-none transition-transform duration-500 ease-entrance hover:-translate-y-2 focus-visible:-translate-y-2 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-4 focus-visible:ring-offset-bg motion-reduce:transition-none motion-reduce:hover:translate-y-0"
     >
-      <span className="flex h-full flex-col bg-surface transition-transform duration-200 ease-out group-hover:-translate-y-1 hover:-translate-y-1">
+      {/* Photo: behind the folder, rises out of it on hover. */}
+      <span className="absolute inset-x-3 top-0 z-0 block h-[56%] overflow-hidden rounded-2xl transition-transform duration-500 ease-entrance group-hover:-translate-y-[40%] group-hover:scale-[1.03] group-focus-visible:-translate-y-[40%] motion-reduce:!translate-y-0 motion-reduce:!scale-100">
         <picture>
           <source srcSet={`${project.image}-1600.avif`} type="image/avif" />
           <source
@@ -64,22 +45,40 @@ const ProjectCard = forwardRef(function ProjectCard(
             alt={imageAlt}
             loading="lazy"
             draggable="false"
-            className="aspect-[16/10] w-full flex-shrink-0 object-cover"
+            className="h-full w-full object-cover"
           />
         </picture>
-        <span className="flex flex-1 flex-col gap-2 p-4 md:p-5">
-          <span className="text-xs uppercase tracking-[0.3em] text-mute">{project.year}</span>
-          <span className="text-base font-semibold leading-tight text-text md:text-lg">{title}</span>
-          <span className="text-sm text-mute">{tagline}</span>
-          <span className="mt-auto flex flex-wrap gap-2 pt-2">
-            {chips.map((item) => (
-              <Chip key={item}>{item}</Chip>
-            ))}
+      </span>
+
+      {/* Folder body: solid panel, notched top-right (folder tab). */}
+      <span className="folder-clip absolute inset-x-0 bottom-0 z-10 flex h-[72%] flex-col justify-between bg-surface-2 p-5 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.65)] transition-transform duration-500 ease-entrance group-hover:translate-y-1 md:p-6">
+        <span className="flex items-start justify-between gap-3">
+          <span className="text-[0.7rem] font-medium uppercase tracking-[0.2em] text-mute">
+            {project.year}
+            {cats ? ` · ${cats}` : ""}
           </span>
+          <svg
+            viewBox="0 0 24 24"
+            className="h-5 w-5 shrink-0 text-mute transition-colors duration-300 group-hover:text-accent"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M7 17L17 7M17 7H8M17 7v9"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
+        <span className="block">
+          <span className="block text-lg font-semibold leading-tight text-text md:text-xl">
+            {title}
+          </span>
+          <span className="mt-1.5 block text-sm leading-snug text-mute">{tagline}</span>
         </span>
       </span>
     </button>
   );
-});
-
-export default ProjectCard;
+}
