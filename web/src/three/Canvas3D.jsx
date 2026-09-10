@@ -24,7 +24,7 @@ const DPR_STEP = 0.25;
  * `invalidate()`. `paused` always wins over it: a hidden tab gets `"never"`
  * regardless of which mode the scene asked for.
  */
-export default function Canvas3D({ dpr, paused, frameloop = "always", children }) {
+export default function Canvas3D({ dpr, paused, frameloop = "always", onContextLost, children }) {
   // `state.dpr` resets `maxDpr` whenever the incoming `dpr` prop changes
   // (e.g. a live reduced-motion flip recomputing the budget upstream).
   // This is React's documented "adjust state when a prop changes"
@@ -45,11 +45,32 @@ export default function Canvas3D({ dpr, paused, frameloop = "always", children }
     }));
   }, []);
 
+  // A lost WebGL context (GPU reset, too many live contexts, a
+  // backgrounded tab Chrome reclaimed) leaves the canvas blank — usually
+  // white, since an un-updated material keeps its default colour. Tell the
+  // wrapper so it can cover it with the poster until the context restores.
+  // `onContextLost` is a stable `setState` setter, so this callback's
+  // identity never changes.
+  const handleCreated = useCallback(
+    (state) => {
+      const canvas = state.gl.domElement;
+      const lost = (event) => {
+        event.preventDefault(); // lets the browser attempt a restore
+        onContextLost?.(true);
+      };
+      const restored = () => onContextLost?.(false);
+      canvas.addEventListener("webglcontextlost", lost);
+      canvas.addEventListener("webglcontextrestored", restored);
+    },
+    [onContextLost],
+  );
+
   return (
     <Canvas
       dpr={[dpr[0], maxDpr]}
       gl={{ antialias: false, powerPreference: "high-performance" }}
       frameloop={paused ? "never" : frameloop}
+      onCreated={handleCreated}
       // Measure via offsetWidth/offsetHeight, read synchronously with
       // layout, instead of waiting on a ResizeObserver entry. When the
       // canvas mounts inside a lazy/Suspense swap in an `absolute inset-0`

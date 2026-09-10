@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   gridLayout,
   gridCoordinate,
-  browserFramePositions,
-  phonePositions,
+  monitorPositions,
+  androidPositions,
   scatteredPositions,
   ringsPositions,
   mixPositions,
@@ -11,8 +11,8 @@ import {
 } from "./serviceShapes.js";
 
 const STATE_GENERATORS = {
-  browserFrame: browserFramePositions,
-  phone: phonePositions,
+  monitor: monitorPositions,
+  android: androidPositions,
   scattered: scatteredPositions,
   rings: ringsPositions,
 };
@@ -73,49 +73,43 @@ describe("gridCoordinate", () => {
   });
 });
 
-// The task brief's table describes "web-app" (browser frame) narrowing
-// into "android" (phone) as a direct morph of the same grid — not two
-// independent layouts that happen to share a vertex count. Both states
-// are built from the identical `gridCoordinate(i, count)` call, so a
-// vertex's rank order along each axis must match between the two: the
-// same vertex that sits left-of-center in the browser-frame state must
-// also sit left-of-center in the phone state, and the two x values must
-// be exactly proportional (same u, only the width constant differs).
-describe("browser-frame <-> phone correspondence", () => {
-  it("is an exact rescale of the same grid, not a reshuffle", () => {
-    const count = 100;
-    const frame = browserFramePositions(count);
-    const phone = phonePositions(count);
-
-    // For consecutive vertex indices (adjacent columns of the shared
-    // grid), the x-order must agree between the two states — never
-    // opposite signs, which would mean the two states disagree about
-    // which vertex is to the left of which.
-    for (let i = 0; i < count - 1; i += 1) {
-      const frameDeltaX = frame[(i + 1) * 3] - frame[i * 3];
-      const phoneDeltaX = phone[(i + 1) * 3] - phone[i * 3];
-      // Same sign (or both exactly flat at a row boundary) — never
-      // opposite signs, which would mean the two states disagree about
-      // which vertex is to the left of which.
-      expect(Math.sign(frameDeltaX)).toBe(Math.sign(phoneDeltaX));
+// The monitor and android states are now distinct icon silhouettes, not
+// a shared grid rescale, so there is no cross-state correspondence to
+// assert beyond equal length (covered above). What each *should* do is
+// stay inside a sane bounding box — points that fly off make the morph
+// read as an explosion rather than a shape change.
+describe("monitor + android silhouettes", () => {
+  it("keep every point within a modest bounding box", () => {
+    for (const generate of [monitorPositions, androidPositions]) {
+      const p = generate(640);
+      for (let i = 0; i < p.length; i += 1) {
+        expect(Math.abs(p[i])).toBeLessThan(2.2);
+      }
     }
   });
 
-  it("scales x and y by a single constant ratio across every vertex (a pure rescale)", () => {
-    const count = 64;
-    const frame = browserFramePositions(count);
-    const phone = phonePositions(count);
+  it("monitor puts its stand below its screen", () => {
+    const p = monitorPositions(640);
+    const ys = [];
+    for (let i = 1; i < p.length; i += 3) ys.push(p[i]);
+    // The lowest points (the foot) sit well below the vertical centre.
+    expect(Math.min(...ys)).toBeLessThan(-0.4);
+    expect(Math.max(...ys)).toBeGreaterThan(0.4);
+  });
 
-    const ratios = [];
-    for (let i = 0; i < count; i += 1) {
-      if (Math.abs(frame[i * 3]) > 1e-6) {
-        ratios.push(phone[i * 3] / frame[i * 3]);
-      }
+  it("android is taller than it is wide (a standing figure)", () => {
+    const p = androidPositions(640);
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (let i = 0; i < p.length; i += 3) {
+      minX = Math.min(minX, p[i]);
+      maxX = Math.max(maxX, p[i]);
+      minY = Math.min(minY, p[i + 1]);
+      maxY = Math.max(maxY, p[i + 1]);
     }
-    const first = ratios[0];
-    for (const ratio of ratios) {
-      expect(ratio).toBeCloseTo(first, 5);
-    }
+    expect(maxY - minY).toBeGreaterThan(maxX - minX);
   });
 });
 
@@ -189,8 +183,8 @@ describe("mixPositions", () => {
   });
 
   it("never produces NaN or Infinity for any t in [0, 1]", () => {
-    const from = browserFramePositions(64);
-    const to = phonePositions(64);
+    const from = monitorPositions(64);
+    const to = androidPositions(64);
     for (const t of [0, 0.25, 0.5, 0.75, 1]) {
       expectAllFinite(mixPositions(from, to, t));
     }

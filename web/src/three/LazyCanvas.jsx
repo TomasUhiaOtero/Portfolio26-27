@@ -68,6 +68,7 @@ export default function LazyCanvas({
   const reduced = useReducedMotion();
   const nearViewport = useInViewport(wrapperRef, { rootMargin, once: false });
   const [paused, setPaused] = useState(() => document.hidden);
+  const [contextLost, setContextLost] = useState(false);
   const { theme } = useTheme();
 
   useEffect(() => {
@@ -141,9 +142,17 @@ export default function LazyCanvas({
     <div ref={wrapperRef} aria-hidden="true" className={className}>
       {mounted ? (
         <Suspense fallback={posterImage}>
-          <Canvas3D dpr={dpr} paused={paused} frameloop={frameloop}>
+          <Canvas3D
+            dpr={dpr}
+            paused={paused}
+            frameloop={frameloop}
+            onContextLost={setContextLost}
+          >
             {children}
           </Canvas3D>
+          {/* Cover a lost context (which renders blank/white) with the
+              poster until the browser restores it. */}
+          {contextLost ? posterImage : null}
         </Suspense>
       ) : (
         posterImage

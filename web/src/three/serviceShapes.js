@@ -1,24 +1,21 @@
 /**
  * Pure, DOM/Three-free geometry generators for `ServiceStage.jsx` — the
  * Services section's morphing-points scene. One function per service
- * state (`browserFramePositions` / `phonePositions` / `scatteredPositions`
- * / `ringsPositions`), each a pure function of a shared vertex `count` so
- * every state produces exactly the same number of vertices. That equal
- * length is not incidental: `ServiceStage.jsx` lerps between two of these
- * arrays in the vertex shader via a single `uProgress` uniform (see its
- * own docblock), so a mismatched length would either throw or silently
- * read garbage past one array's end.
+ * state, each an icon-like silhouette the points fill:
+ *   - `monitorPositions`  — a desktop monitor (screen + stand): "web-app"
+ *   - `androidPositions`  — the Android robot mascot: "android"
+ *   - `scatteredPositions` — a loose point cloud: "ia"
+ *   - `ringsPositions`     — stacked concentric rings: "api-db"
+ * Each is a pure function of a shared vertex `count` so every state
+ * produces exactly the same number of vertices — `ServiceStage.jsx` lerps
+ * between two of these arrays in the vertex shader via a single
+ * `uProgress` uniform, so a mismatched length would throw or read garbage.
  *
- * No `Math.random` anywhere in this module. Every "random-looking" value
- * (the scatter offsets) is a deterministic hash of the vertex index, so
- * calling any of these twice with the same `count` reproduces the exact
- * same array — required both for these functions to be unit-testable and
- * so a re-render can never silently reshuffle the shape underneath a
- * live, in-progress tween.
- *
- * Extracted for the same reason `orbit.js` (Task 9) and `aboutScroll.js`
- * (Task 8) were: this has a provable right answer and needs neither a
- * live WebGL frame loop nor even "three" itself to test.
+ * No `Math.random` anywhere: every "random-looking" value is a
+ * deterministic hash of the vertex index, so calling any of these twice
+ * with the same `count` reproduces the exact same array — required for
+ * unit-testability and so a re-render can never reshuffle a shape under a
+ * live tween.
  */
 
 // ---------------------------------------------------------------------
@@ -51,50 +48,6 @@ export function gridCoordinate(index, count) {
 }
 
 // ---------------------------------------------------------------------
-// "web-app": a flat grid in browser-window proportions. The outer border
-// band of the grid is pulled forward in z (`FRAME_LIP`) so it reads as a
-// raised frame/chrome around a recessed content plane, rather than a
-// plain flat sheet.
-// ---------------------------------------------------------------------
-
-const BROWSER_WIDTH = 1.7;
-const BROWSER_HEIGHT = 1.05;
-const FRAME_LIP = 0.16;
-const FRAME_BORDER_BAND = 0.08; // fraction of u/v treated as "the frame"
-
-export function browserFramePositions(count, out = new Float32Array(count * 3)) {
-  for (let i = 0; i < count; i += 1) {
-    const { u, v } = gridCoordinate(i, count);
-    const onBorder =
-      u < FRAME_BORDER_BAND || u > 1 - FRAME_BORDER_BAND || v < FRAME_BORDER_BAND || v > 1 - FRAME_BORDER_BAND;
-    out[i * 3] = (u - 0.5) * BROWSER_WIDTH;
-    out[i * 3 + 1] = (v - 0.5) * BROWSER_HEIGHT;
-    out[i * 3 + 2] = onBorder ? FRAME_LIP : 0;
-  }
-  return out;
-}
-
-// ---------------------------------------------------------------------
-// "android": the exact same grid slots as `browserFramePositions`,
-// narrowed to a portrait phone aspect and flattened back to z = 0 — no
-// frame lip, so the transition from the browser-frame state reads as the
-// border relaxing back into the plane while the whole sheet narrows.
-// ---------------------------------------------------------------------
-
-const PHONE_WIDTH = 0.6;
-const PHONE_HEIGHT = 1.55;
-
-export function phonePositions(count, out = new Float32Array(count * 3)) {
-  for (let i = 0; i < count; i += 1) {
-    const { u, v } = gridCoordinate(i, count);
-    out[i * 3] = (u - 0.5) * PHONE_WIDTH;
-    out[i * 3 + 1] = (v - 0.5) * PHONE_HEIGHT;
-    out[i * 3 + 2] = 0;
-  }
-  return out;
-}
-
-// ---------------------------------------------------------------------
 // Deterministic hash of an integer-ish index into [0, 1) — a common
 // GLSL-style sine hash. Never `Math.random`: see the module docblock.
 // ---------------------------------------------------------------------
@@ -102,6 +55,110 @@ export function phonePositions(count, out = new Float32Array(count * 3)) {
 function hash(n) {
   const x = Math.sin(n * 12.9898) * 43758.5453123;
   return x - Math.floor(x);
+}
+
+// ---------------------------------------------------------------------
+// "web-app": a desktop monitor — a filled screen rectangle with a raised
+// frame band, sitting on a short neck and a wide foot. `gridCoordinate`
+// spreads the screen vertices across a grid so the panel stays evenly
+// filled at any count; the last ~18% of vertices form the stand.
+// ---------------------------------------------------------------------
+
+const SCREEN_WIDTH = 1.95;
+const SCREEN_HEIGHT = 1.16;
+const SCREEN_Y = 0.2; // lift the screen so the stand has room below it
+const FRAME_LIP = 0.16;
+const FRAME_BORDER_BAND = 0.08;
+
+export function monitorPositions(count, out = new Float32Array(count * 3)) {
+  const screenCount = Math.max(1, Math.floor(count * 0.82));
+  const neckCount = Math.max(0, Math.floor(count * 0.06));
+
+  for (let i = 0; i < count; i += 1) {
+    let x;
+    let y;
+    let z = 0;
+
+    if (i < screenCount) {
+      const { u, v } = gridCoordinate(i, screenCount);
+      const onBorder =
+        u < FRAME_BORDER_BAND ||
+        u > 1 - FRAME_BORDER_BAND ||
+        v < FRAME_BORDER_BAND ||
+        v > 1 - FRAME_BORDER_BAND;
+      x = (u - 0.5) * SCREEN_WIDTH;
+      y = SCREEN_Y + (v - 0.5) * SCREEN_HEIGHT;
+      z = onBorder ? FRAME_LIP : 0;
+    } else if (i < screenCount + neckCount) {
+      const j = i - screenCount;
+      x = (hash(j * 1.7 + 0.3) - 0.5) * 0.16;
+      y = SCREEN_Y - SCREEN_HEIGHT / 2 - hash(j * 2.1 + 1.1) * 0.22;
+    } else {
+      const j = i - screenCount - neckCount;
+      x = (hash(j * 1.9 + 0.7) - 0.5) * 1.0;
+      y =
+        SCREEN_Y -
+        SCREEN_HEIGHT / 2 -
+        0.24 -
+        hash(j * 2.7 + 3.3) * 0.09;
+    }
+
+    out[i * 3] = x;
+    out[i * 3 + 1] = y;
+    out[i * 3 + 2] = z;
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------
+// "android": the Android robot mascot, filled with points — a domed head
+// with two antennae, a rounded body, two arms and two legs. Each vertex
+// is assigned to a body part by `index % PARTS.length` (round-robin, so
+// every part fills evenly at any count) and placed inside that part with
+// a deterministic hash.
+// ---------------------------------------------------------------------
+
+// Relative share of the vertices given to each part, in round-robin
+// order. Head and body get the most; the limbs are thin.
+const ANDROID_PARTS = ["head", "head", "head", "body", "body", "body", "body", "arm", "leg", "antenna"];
+
+export function androidPositions(count, out = new Float32Array(count * 3)) {
+  for (let i = 0; i < count; i += 1) {
+    const part = ANDROID_PARTS[i % ANDROID_PARTS.length];
+    const h1 = hash(i * 1.73 + 0.11);
+    const h2 = hash(i * 2.61 + 4.07);
+    const side = hash(i * 3.17 + 8.9) < 0.5 ? -1 : 1;
+    let x;
+    let y;
+
+    if (part === "head") {
+      // Upper half-disc, flat along the bottom at y ~ 0.28.
+      const r = 0.42 * Math.sqrt(h1);
+      const angle = Math.PI * h2;
+      x = Math.cos(angle) * r;
+      y = 0.3 + Math.sin(angle) * r * 0.92;
+    } else if (part === "antenna") {
+      // Two short stalks angling out from the top of the head.
+      const s = h1;
+      x = side * (0.2 + s * 0.16);
+      y = 0.6 + s * 0.26;
+    } else if (part === "body") {
+      x = (h1 - 0.5) * 0.78;
+      y = -0.56 + h2 * 0.82;
+    } else if (part === "arm") {
+      x = side * (0.47 + h1 * 0.11);
+      y = -0.42 + h2 * 0.52;
+    } else {
+      // leg
+      x = side * (0.08 + h1 * 0.16);
+      y = -0.86 + h2 * 0.3;
+    }
+
+    out[i * 3] = x;
+    out[i * 3 + 1] = y;
+    out[i * 3 + 2] = (hash(i * 4.9 + 1.7) - 0.5) * 0.06;
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------
