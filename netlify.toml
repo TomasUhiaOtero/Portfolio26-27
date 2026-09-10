@@ -1,11 +1,11 @@
 # Configuración de despliegue.
 #
-# La aplicación vive en el subdirectorio `vite-project/`, así que hay que
-# indicar la carpeta base explícitamente. Si en el panel de Netlify ya había
-# valores puestos a mano, este archivo tiene prioridad sobre ellos.
+# La aplicación vive en el subdirectorio `web/`, así que hay que indicar la
+# carpeta base explícitamente. Si en el panel de Netlify ya había valores
+# puestos a mano, este archivo tiene prioridad sobre ellos.
 
 [build]
-  base = "vite-project"
+  base = "web"
   command = "npm run build"
   publish = "dist"
 
