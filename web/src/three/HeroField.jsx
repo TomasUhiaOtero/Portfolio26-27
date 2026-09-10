@@ -27,7 +27,9 @@ const LINK_DISTANCE_SQ = LINK_DISTANCE * LINK_DISTANCE;
 // squared-distance/every-other-frame savings in the frame loop below.
 const MAX_SEGMENTS_PER_PARTICLE = 6;
 
-const PARALLAX_LERP = 0.02;
+// Higher = the tilt catches up to the cursor faster (less trailing lag),
+// so the pointer reaction is clearly felt rather than a slow drift.
+const PARALLAX_LERP = 0.06;
 
 // Kept out of the component body (and so out of useMemo's factory) on
 // purpose: the new React Compiler-oriented lint rules flag `Math.random`
@@ -85,7 +87,8 @@ export default function HeroField() {
   const lineGeometryRef = useRef(null);
   const lineMaterialRef = useRef(null);
   const frameParityRef = useRef(0);
-  const parallaxRef = useRef({ x: 0, y: 0 });
+  const parallaxRef = useRef({ x: 0, y: 0, px: 0, py: 0 });
+  const rollRef = useRef(0);
 
   // Colours are read once from computed styles at construction time (the
   // `data-theme` attribute is already correct by then — this only mounts
@@ -135,22 +138,28 @@ export default function HeroField() {
   // exactly what the squared-distance neighbour rebuild needs to stay
   // cheap at 260 points (the mutation itself lives in
   // `findNeighbourPairs`, in neighbourLines.js, where it's unit-tested).
-  useFrame(() => {
+  useFrame((_, delta) => {
     const now = performance.now();
 
-    // The field is always gently alive: a slow sine sway on both axes so
-    // it reads as animated even with the pointer still (a full continuous
-    // yaw would turn the flat slab edge-on and make it vanish). The
-    // pointer then adds a trailing parallax offset on top — lerped, not
-    // snapped, so the tilt follows the cursor rather than sticking to it.
+    // The field is always alive: a continuous slow roll (about the view
+    // axis, so the flat slab never turns edge-on) plus a sine sway on the
+    // other two axes and a lateral drift. The pointer adds a trailing
+    // parallax tilt AND a lateral push on top — both lerped so the
+    // reaction is felt without snapping.
     const group = groupRef.current;
     if (group) {
       const p = pointerRef.current;
-      parallaxRef.current.x += (p.y * 0.12 - parallaxRef.current.x) * PARALLAX_LERP;
-      parallaxRef.current.y += (p.x * 0.28 - parallaxRef.current.y) * PARALLAX_LERP;
-      group.rotation.x = Math.sin(now * 0.00017) * 0.05 + parallaxRef.current.x;
-      group.rotation.y = Math.sin(now * 0.00011) * 0.09 + parallaxRef.current.y;
-      group.position.x = Math.sin(now * 0.00009) * 0.15;
+      parallaxRef.current.x += (p.y * 0.22 - parallaxRef.current.x) * PARALLAX_LERP;
+      parallaxRef.current.y += (p.x * 0.42 - parallaxRef.current.y) * PARALLAX_LERP;
+      parallaxRef.current.px += (p.x * 0.6 - parallaxRef.current.px) * PARALLAX_LERP;
+      parallaxRef.current.py += (p.y * 0.4 - parallaxRef.current.py) * PARALLAX_LERP;
+
+      rollRef.current += delta * 0.035;
+      group.rotation.z = rollRef.current;
+      group.rotation.x = Math.sin(now * 0.0002) * 0.08 + parallaxRef.current.x;
+      group.rotation.y = Math.sin(now * 0.00013) * 0.13 + parallaxRef.current.y;
+      group.position.x = Math.sin(now * 0.0001) * 0.25 + parallaxRef.current.px;
+      group.position.y = Math.sin(now * 0.00008) * 0.18 + parallaxRef.current.py;
     }
 
     const pointColor = tickColorTransition(colors.point, now);

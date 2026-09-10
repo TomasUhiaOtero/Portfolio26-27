@@ -118,9 +118,18 @@
 
 @utility hero-aurora {
   position: absolute;
-  inset: 0;
+  inset: -6%;
   overflow: hidden;
   pointer-events: none;
+  /* The whole field leans toward the pointer (`--hero-mx/my` are set from
+     Hero.jsx, -1..1). Smoothed with a transition so it trails the cursor;
+     the blobs keep their own drift keyframes on top of this. */
+  transform: translate3d(
+    calc(var(--hero-mx, 0) * 26px),
+    calc(var(--hero-my, 0) * 18px),
+    0
+  );
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
   /* Base wash: two fixed radial pools so the hero is never flat black,
      even with motion disabled or the blobs mid-drift. */
   background:

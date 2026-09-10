@@ -1,4 +1,4 @@
-import { lazy, useRef } from "react";
+import { lazy, useEffect, useRef } from "react";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
 import { profile } from "../data/content.js";
 import useReducedMotion from "../hooks/useReducedMotion.js";
@@ -37,6 +37,34 @@ export default function Hero() {
   });
 
   useIntroTimeline(rootRef, { enabled: !reduced });
+
+  // Feed the pointer position (as -1..1 on each axis) to CSS custom
+  // properties so the aurora blobs can lean toward the cursor. rAF-
+  // throttled; skipped entirely under reduced motion.
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el || reduced) return undefined;
+    let frame = 0;
+    let nx = 0;
+    let ny = 0;
+    const onMove = (e) => {
+      const r = el.getBoundingClientRect();
+      nx = ((e.clientX - r.left) / r.width - 0.5) * 2;
+      ny = ((e.clientY - r.top) / r.height - 0.5) * 2;
+      if (!frame) {
+        frame = requestAnimationFrame(() => {
+          frame = 0;
+          el.style.setProperty("--hero-mx", nx.toFixed(3));
+          el.style.setProperty("--hero-my", ny.toFixed(3));
+        });
+      }
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [reduced]);
 
   return (
     <section
