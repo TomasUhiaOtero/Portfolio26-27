@@ -19,7 +19,19 @@ export default function Button({ href, variant = "primary", className = "", chil
         aria-hidden
         className="absolute inset-0 origin-left scale-x-0 bg-accent transition-transform duration-[220ms] ease-entrance group-hover:scale-x-100"
       />
-      <span className="relative">{children}</span>
+      {/* On a primary button the accent fill wipes in behind the label, and
+          `text-text` on `bg-accent` only clears ~3.4:1 — below AA. Flip the
+          label to `text-bg` (the same pairing the skip link uses) once the
+          fill has arrived: the colour swap is delayed ~220ms so it lands
+          after the wipe, not mid-sweep. Ghost buttons have no fill, so they
+          keep the inherited colour. */}
+      <span
+        className={`relative transition-colors delay-200 duration-150 ${
+          isGhost ? "" : "group-hover:text-bg"
+        }`}
+      >
+        {children}
+      </span>
     </a>
   );
 }
