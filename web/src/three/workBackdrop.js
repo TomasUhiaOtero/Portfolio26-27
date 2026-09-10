@@ -16,6 +16,14 @@ import { wrapIndex } from "../lib/carousel.js";
  * helper `Work.jsx` itself uses to keep `focusIndex` in range) is what
  * makes this continuous across the wrap from the last card back to the
  * first — `wrapIndex` never jumps, so neither does `Math.sin` of it.
+ *
+ * This is a *sway*, not a linear tracker: a steady one-direction spin
+ * sends the blob out to one edge and back over a lap rather than racing
+ * off forever. That's deliberate — any continuous mapping of a loop onto
+ * a bounded axis has to turn around somewhere, and a soft ambient glow
+ * that drifts and returns as you page through the deck reads better than
+ * one that snaps at the wrap. The blob is a mood light, not a position
+ * indicator.
  */
 export function blobPosition(index, length) {
   if (!(length > 0)) return 0;

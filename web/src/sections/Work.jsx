@@ -101,6 +101,17 @@ export default function Work() {
   const continuousIndexRef = useRef(focusIndex);
   const rafRef = useRef(null);
   const lastTsRef = useRef(null);
+  // WorkBackdrop runs on `frameloop="demand"`, so its own `useFrame` never
+  // wakes unless something calls its `invalidate()`. This section drives
+  // `continuousIndexRef` from `ensureLoop`'s rAF (below) during a drag or
+  // spring settle WITHOUT any React re-render, so nothing would otherwise
+  // repaint the backdrop while the carousel is actually moving — the blob
+  // would sit frozen through the drag and only catch up on release. The
+  // backdrop hands its `invalidate` up through this ref on mount; the tick
+  // loop calls it every frame it's alive, which is exactly the window the
+  // index is in motion. Null whenever the scene is unmounted (reduced
+  // motion, off-screen), where the `?.()` call is a harmless no-op.
+  const backdropInvalidateRef = useRef(null);
 
   const dragRef = useRef({
     active: false,
@@ -154,6 +165,9 @@ export default function Work() {
         continuousIndexRef.current = spring.step(dt);
       }
       writeTrackTransform();
+      // Repaint the demand-mode backdrop in lockstep with the index we
+      // just moved (no-op until the scene mounts and registers itself).
+      backdropInvalidateRef.current?.();
       if (!drag.active && spring.isSettled()) {
         rafRef.current = null;
         return;
@@ -388,7 +402,13 @@ export default function Work() {
         frameloop="demand"
         className="absolute inset-0 -z-10 overflow-hidden"
       >
-        <WorkBackdrop indexRef={continuousIndexRef} length={length} />
+        <WorkBackdrop
+          indexRef={continuousIndexRef}
+          length={length}
+          onInvalidateReady={(fn) => {
+            backdropInvalidateRef.current = fn;
+          }}
+        />
       </LazyCanvas>
 
       <div className="mx-auto w-full max-w-[1400px] px-6 sm:px-10">

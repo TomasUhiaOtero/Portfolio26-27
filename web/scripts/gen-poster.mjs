@@ -253,23 +253,26 @@
  *   4. The same `applyVignette` step every other mode uses, same per-theme
  *      caveat (light poster ships `--vignette-alpha 0`).
  *
- * Unlike `network` mode's raster marks, this composites full-opacity
- * colour across the *entire* frame (`mix(bg, gradient, gradientMix)` at
- * every pixel, not a sparse overlay), so — unlike the dark-marks-on-light
- * vs light-marks-on-dark contrast problem that made the other three modes
- * need different alpha values per theme — the same `--gradient-mix`/
- * `--blob-alpha` read at comparable weight in both themes: contrast here
- * comes from `--accent`/`--glow`/`--bg` themselves differing, not from an
- * alpha tuned against a fixed-luminance ground. Only the vignette still
- * needs its usual per-theme fork.
+ * This composites colour across the *entire* frame (`mix(bg, gradient,
+ * gradientMix)` at every pixel, not a sparse overlay), and — like the
+ * other three modes, though for a different reason — it needs DIFFERENT
+ * `--gradient-mix`/`--blob-alpha` per theme. The light theme's `--accent`/
+ * `--glow` are vivid and its `--bg` is near white, so even a modest mix
+ * washes the whole frame in saturated periwinkle; the dark theme needs
+ * MORE weight for the same tint to register at all against near-black. The
+ * live shader (`WorkBackdrop.jsx`'s `BACKDROP_TUNING`) carries the exact
+ * same two value pairs — light `{mix 0.16, blob 0.14}`, dark `{mix 0.34,
+ * blob 0.24}` — keep the invocations below and that table in sync. The
+ * vignette keeps its usual per-theme fork on top (light ships
+ * `--vignette-alpha 0`).
  *
  * Usage — regenerate the two current Work posters (run from `web/`):
  *
  *   node scripts/gen-poster.mjs --mode radial-glow \
  *     --bg "#000000" --accent "#0a84ff" --glow "#5e5ce6" \
  *     --width 1600 --height 900 \
- *     --gradient-outer 1.1 --gradient-mix 0.30 \
- *     --blob-x 0 --blob-radius 0.85 --blob-alpha 0.22 \
+ *     --gradient-outer 1.1 --gradient-mix 0.34 \
+ *     --blob-x 0 --blob-radius 0.85 --blob-alpha 0.24 \
  *     --vignette-alpha 0.14 --vignette-start 0.85 \
  *     --out public/img/work-poster.png
  *   ffmpeg -y -i public/img/work-poster.png -c:v libwebp -quality 82 public/img/work-poster.webp
@@ -278,8 +281,8 @@
  *   node scripts/gen-poster.mjs --mode radial-glow \
  *     --bg "#fbfbfd" --accent "#0071e3" --glow "#5856d6" \
  *     --width 1600 --height 900 \
- *     --gradient-outer 1.1 --gradient-mix 0.30 \
- *     --blob-x 0 --blob-radius 0.85 --blob-alpha 0.22 \
+ *     --gradient-outer 1.1 --gradient-mix 0.16 \
+ *     --blob-x 0 --blob-radius 0.85 --blob-alpha 0.14 \
  *     --vignette-alpha 0 --vignette-start 0.85 \
  *     --out public/img/work-poster-light.png
  *   ffmpeg -y -i public/img/work-poster-light.png -c:v libwebp -quality 82 public/img/work-poster-light.webp
@@ -906,10 +909,10 @@ function main() {
     const options = {
       ...shared,
       gradientOuter: requireNumber(args, "gradient-outer", 1.1),
-      gradientMix: requireNumber(args, "gradient-mix", 0.3),
+      gradientMix: requireNumber(args, "gradient-mix", 0.34),
       blobX: requireNumber(args, "blob-x", 0),
       blobRadius: requireNumber(args, "blob-radius", 0.85),
-      blobAlpha: requireNumber(args, "blob-alpha", 0.22),
+      blobAlpha: requireNumber(args, "blob-alpha", 0.14),
     };
     canvas = generateRadialGlowPoster(options);
     summary = `radial-glow, blob-x ${options.blobX}`;

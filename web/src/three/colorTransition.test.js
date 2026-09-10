@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { Color } from "three";
-import { makeColorTransition, startColorTransition, tickColorTransition } from "./colorTransition.js";
+import {
+  makeColorTransition,
+  startColorTransition,
+  tickColorTransition,
+  isColorTransitionActive,
+} from "./colorTransition.js";
 
 // The theme lerp is the one part of HeroField that can't be exercised by
 // scrolling a real browser in CI (or, as it turned out while building
@@ -49,6 +54,31 @@ describe("colorTransition", () => {
     const transition = makeColorTransition(BLUE);
     startColorTransition(transition, RED, 1000);
     expect(tickColorTransition(transition, 5000).getHex()).toBe(RED.getHex());
+  });
+
+  it("reports a fresh (never-started) transition as inactive", () => {
+    const transition = makeColorTransition(BLUE);
+    expect(isColorTransitionActive(transition, 1000)).toBe(false);
+  });
+
+  it("reports a transition as active from the instant it starts until the duration elapses", () => {
+    const transition = makeColorTransition(BLUE);
+    startColorTransition(transition, RED, 1000);
+    expect(isColorTransitionActive(transition, 1000)).toBe(true);
+    expect(isColorTransitionActive(transition, 1399)).toBe(true);
+    expect(isColorTransitionActive(transition, 1400)).toBe(false); // COLOR_LERP_MS reached
+    expect(isColorTransitionActive(transition, 5000)).toBe(false);
+  });
+
+  it("agrees with tickColorTransition on when the lerp is done", () => {
+    const transition = makeColorTransition(BLUE);
+    startColorTransition(transition, RED, 1000);
+    // Still active → colour is not yet the target.
+    expect(isColorTransitionActive(transition, 1200)).toBe(true);
+    expect(tickColorTransition(transition, 1200).getHex()).not.toBe(RED.getHex());
+    // No longer active → colour has landed on the target.
+    expect(isColorTransitionActive(transition, 1400)).toBe(false);
+    expect(tickColorTransition(transition, 1400).getHex()).toBe(RED.getHex());
   });
 
   it("a second transition starts from wherever the first one currently is", () => {

@@ -39,6 +39,8 @@ const FRAGMENT_SHADER = /* glsl */ `
   uniform vec3 uGlow;
   uniform vec3 uBg;
   uniform float uBlobX;
+  uniform float uMix;
+  uniform float uBlobAlpha;
   uniform vec2 uResolution;
   varying vec2 vUv;
 
@@ -48,18 +50,19 @@ const FRAGMENT_SHADER = /* glsl */ `
 
     float d = length(p);
     vec3 gradient = mix(uAccent, uGlow, smoothstep(0.0, 1.1, d));
-    // 0.30, not a half-and-half blend: this is a backdrop behind the
-    // carousel, not a hero. At 0.55 the light theme's vivid --accent/--glow
-    // washed the whole section in saturated periwinkle; 0.30 keeps the page
-    // ground dominant in both themes while still tinting it.
-    vec3 color = mix(uBg, gradient, 0.30);
+    // uMix / uBlobAlpha are per-theme (see BACKDROP_TUNING below), not a
+    // constant: this is a -z-10 backdrop, not a hero. The light theme's
+    // vivid --accent/--glow wash the near-white page hard, so light gets a
+    // much lower mix (0.16) than dark (0.34), where a faint blue on black
+    // needs the extra weight just to be visible at all.
+    vec3 color = mix(uBg, gradient, uMix);
 
     // The soft light blob: horizontal position tracks uBlobX (-1..1,
     // see blobPosition in workBackdrop.js), vertically centred.
     vec2 blobCenter = vec2(uBlobX * aspect * 0.45, 0.0);
     float blobDist = length(p - blobCenter);
     float blob = smoothstep(0.85, 0.0, blobDist);
-    color += uGlow * blob * 0.22;
+    color += uGlow * blob * uBlobAlpha;
 
     gl_FragColor = vec4(color, 1.0);
   }
@@ -69,6 +72,17 @@ function readBgColor() {
   const value = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
   return new THREE.Color(value);
 }
+
+// Per-theme gradient weight and blob strength. Light sits far lower: the
+// light theme's --accent/--glow are vivid and the page ground is near
+// white (#fbfbfd), so even a modest mix reads as a saturated wash behind
+// the carousel; dark needs more weight for the same tint to register at
+// all against near-black. gen-poster.mjs's radial-glow mode is invoked
+// with these exact values per theme — keep the two in sync.
+const BACKDROP_TUNING = {
+  light: { mix: 0.16, blobAlpha: 0.14 },
+  dark: { mix: 0.34, blobAlpha: 0.24 },
+};
 
 /**
  * The projects carousel's backdrop: a full-bleed fragment shader behind
@@ -97,10 +111,20 @@ function readBgColor() {
  * frames "demand" mode exists to save, rather than defeating the point by
  * invalidating unconditionally every tick.
  */
-export default function WorkBackdrop({ indexRef, length }) {
+export default function WorkBackdrop({ indexRef, length, onInvalidateReady }) {
   const { theme } = useTheme();
   const invalidate = useThree((state) => state.invalidate);
   const size = useThree((state) => state.size);
+
+  // Hand `invalidate` up to Work.jsx so its own rAF (which drives
+  // `indexRef` during a drag/settle without re-rendering) can wake this
+  // demand-mode canvas frame by frame — see Work.jsx's own comment on
+  // `backdropInvalidateRef`. Cleared on unmount so the caller's `?.()`
+  // becomes a no-op rather than poking a dead root.
+  useEffect(() => {
+    onInvalidateReady?.(invalidate);
+    return () => onInvalidateReady?.(null);
+  }, [onInvalidateReady, invalidate]);
 
   const materialRef = useRef(null);
   // Starts at 0 rather than `indexRef.current` — reading a ref's `.current`
@@ -158,6 +182,11 @@ export default function WorkBackdrop({ indexRef, length }) {
       uGlow: { value: new THREE.Color() },
       uBg: { value: new THREE.Color() },
       uBlobX: { value: 0 },
+      // Seeded from the theme at mount (this useMemo already opts out of
+      // exhaustive-deps, so the closed-over `theme` is fine — the effect
+      // below owns every later change).
+      uMix: { value: (BACKDROP_TUNING[theme] ?? BACKDROP_TUNING.dark).mix },
+      uBlobAlpha: { value: (BACKDROP_TUNING[theme] ?? BACKDROP_TUNING.dark).blobAlpha },
       uResolution: { value: new THREE.Vector2(size.width, size.height) },
     }),
     // Intentionally not depending on `size`: uniforms are created exactly
@@ -175,6 +204,22 @@ export default function WorkBackdrop({ indexRef, length }) {
   useEffect(() => {
     uniforms.uResolution.value.set(size.width, size.height);
   }, [size, uniforms]);
+
+  // Per-theme mix/blob strength. Snapped, not lerped: the change is tiny
+  // (0.16 <-> 0.34), the layer is at -z-10 and mostly occluded by cards,
+  // and it lands inside the 400ms colour cross-fade the theme flip already
+  // kicks off — a separate eased ramp for it would be imperceptible.
+  // Written through the live material (a ref), not the memoised `uniforms`
+  // object, so it's a mutation of an owned mutable, same as the resize
+  // effect's `.value.set()` above.
+  useEffect(() => {
+    const material = materialRef.current;
+    if (!material) return;
+    const tuning = BACKDROP_TUNING[theme] ?? BACKDROP_TUNING.dark;
+    material.uniforms.uMix.value = tuning.mix;
+    material.uniforms.uBlobAlpha.value = tuning.blobAlpha;
+    invalidate();
+  }, [theme, invalidate]);
 
   // The one per-frame loop — reads `indexRef.current` and the colour
   // transitions, writes uniforms, and decides whether to chain another
