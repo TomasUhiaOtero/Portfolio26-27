@@ -10,7 +10,7 @@
   publish = "dist"
 
 [build.environment]
-  NODE_VERSION = "20"
+  NODE_VERSION = "22"
 
 # SPA de una sola página: cualquier ruta desconocida sirve el index.
 [[redirects]]
