@@ -84,6 +84,7 @@ export default function Work() {
   const [radius, setRadius] = useState(() => (matchesDesktop() ? DESKTOP_RADIUS : MOBILE_RADIUS));
 
   const trackRef = useRef(null);
+  const stageRef = useRef(null);
   const cardRefs = useRef([]);
   // The DOM node of the card that opened the currently-shown overlay — the
   // "source" rect for ProjectOverlay's shared-element transition. Set the
@@ -388,6 +389,18 @@ export default function Work() {
     [moveFocus],
   );
 
+  // React 19 registers `wheel` as a passive listener, so an `onWheel`
+  // prop's `event.preventDefault()` is silently dropped (and warns) —
+  // which would let a horizontal trackpad swipe over the carousel trigger
+  // the browser's back-navigation gesture. Attach it natively as
+  // non-passive instead.
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return undefined;
+    stage.addEventListener("wheel", handleWheel, { passive: false });
+    return () => stage.removeEventListener("wheel", handleWheel);
+  }, [handleWheel]);
+
   const listboxId = "proyectos-carousel";
 
   return (
@@ -423,13 +436,13 @@ export default function Work() {
       </div>
 
       <div
+        ref={stageRef}
         className="relative mt-16 h-[420px] w-full select-none md:h-[560px]"
         style={{ perspective: "1400px", perspectiveOrigin: "50% 50%" }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
-        onWheel={handleWheel}
       >
         <div
           ref={trackRef}

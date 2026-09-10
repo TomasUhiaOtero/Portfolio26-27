@@ -22,12 +22,13 @@ export default function Button({ href, variant = "primary", className = "", chil
       {/* On a primary button the accent fill wipes in behind the label, and
           `text-text` on `bg-accent` only clears ~3.4:1 — below AA. Flip the
           label to `text-bg` (the same pairing the skip link uses) once the
-          fill has arrived: the colour swap is delayed ~220ms so it lands
-          after the wipe, not mid-sweep. Ghost buttons have no fill, so they
-          keep the inherited colour. */}
+          fill has arrived. The delay is directional: 200ms on the way in so
+          the swap lands after the wipe, 0 on the way out so the label never
+          holds `text-bg` over the (fast-retracting) uncovered surface. Ghost
+          buttons have no fill, so they keep the inherited colour. */}
       <span
-        className={`relative transition-colors delay-200 duration-150 ${
-          isGhost ? "" : "group-hover:text-bg"
+        className={`relative transition-colors duration-150 delay-0 ${
+          isGhost ? "" : "group-hover:text-bg group-hover:delay-200"
         }`}
       >
         {children}

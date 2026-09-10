@@ -338,19 +338,6 @@ export default function Experience() {
             })}
           </ol>
         </div>
-
-        {/* Scroll-room buffer, not visual content: the last node's own
-            `start: "top 65%"` trigger needs the viewport to be able to
-            scroll it up past that line, but Experience is currently the
-            last section on the page (more land in later tasks) — without
-            this, the document runs out of scroll before that line is
-            ever reached and the last node can never pop. Verified live:
-            without this buffer the fifth node's `getBoundingClientRect().
-            top` stalled at the document's max scroll position, short of
-            the 65% line, at common viewport heights. Sized as a fraction
-            of the viewport height (not a fixed px value) so it scales
-            with whatever `start: "top 65%"` needs at any viewport. */}
-        <div aria-hidden="true" className="h-[60vh]" />
       </div>
     </section>
   );
