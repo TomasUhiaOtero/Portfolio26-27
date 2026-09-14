@@ -3,6 +3,7 @@ import gsap from "gsap";
 import useReducedMotion from "../hooks/useReducedMotion.js";
 import { ENTRANCE_EASE } from "../lib/ease.js";
 import { wordStagger } from "../lib/stagger.js";
+import { isIntroDone } from "../hooks/useIntroTimeline.js";
 
 const DURATION = 0.7;
 
@@ -67,6 +68,26 @@ export default function SplitText({
     return () => tween.kill();
   }, [animate, reduced, text]);
 
+  // `animate={false}` mounts fresh, still hidden — but only the FIRST
+  // time. Hero's `text` prop changes on a language switch, `words` then
+  // differs at every index, and every `[data-word]`'s `key` (`${word}-
+  // ${i}`) changes with it, so React tears down the old spans and mounts
+  // brand new ones — starting hidden again. `useIntroTimeline`'s own
+  // `fromTo`/`gsap.set` is a one-time mount effect on Hero, not something
+  // that reruns for a later remount here, so nothing would ever reveal
+  // these new spans: the exact "permanently invisible" failure mode this
+  // project has shipped before, just from a different trigger. Once the
+  // intro is verifiably done (`isIntroDone()`), skip waiting on it and
+  // jump straight to the resting state ourselves — a language switch
+  // isn't part of the entrance choreography anyway, so it should just
+  // appear, not replay a reveal.
+  useLayoutEffect(() => {
+    if (animate || !isIntroDone()) return;
+    const el = ref.current;
+    if (!el) return;
+    gsap.set(el.querySelectorAll("[data-word]"), { opacity: 1, yPercent: 0 });
+  }, [animate, text]);
+
   // When `animate` is false, this component sets up no hiding mechanism of
   // its own — the owning timeline's `fromTo` is what hides and reveals
   // these spans. But that timeline only builds after fonts are ready
@@ -75,10 +96,10 @@ export default function SplitText({
   // never runs the WORD row at all — the spans must still start hidden
   // exactly like the rest of the hero: `js-hidden`'s `@layer base` rule
   // forces opacity back to 1 the instant `html` lacks `.js` (bundle never
-  // ran), and the owning timeline's own reduced-motion branch resets
-  // `[data-word]` to its resting state explicitly. So this can never end
-  // up permanently invisible the way a bare `opacity-0` with no fallback
-  // could.
+  // ran), and the owning timeline's own reduced-motion branch (or, for a
+  // later remount, the effect just above) resets `[data-word]` to its
+  // resting state explicitly. So this can never end up permanently
+  // invisible the way a bare `opacity-0` with no fallback could.
   const wordClassName = animate
     ? "inline-block whitespace-nowrap"
     : "inline-block whitespace-nowrap js-hidden opacity-0";

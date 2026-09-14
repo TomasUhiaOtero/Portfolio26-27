@@ -18,7 +18,13 @@ export const profile = {
   phoneHref: "+34698107375",
   github: "https://github.com/TomasUhiaOtero",
   linkedin: "https://www.linkedin.com/in/tom%C3%A1s-uh%C3%ADa-otero-b10748345/",
-  resume: "/TomasUhiaOteroResume.pdf",
+  // Two different files, not one shared PDF: the ES/EN CVs differ in more
+  // than translation (e.g. one may list a role the other doesn't yet), so
+  // each language must link its own.
+  resume: {
+    es: "/CV-TomasUhiaOtero-ES.pdf",
+    en: "/CV-TomasUhiaOtero-EN.pdf",
+  },
   // LazyCanvas resolves dark/light itself via useTheme() — see its
   // docblock — so every caller just hands over both stills once.
   heroPoster: {
@@ -52,8 +58,15 @@ export const content = {
     hero: {
       eyebrow: "Tomás Uhía Otero — Pontevedra, España",
       headline: "Desarrollador full-stack, del modelo de datos a la interfaz.",
+      // The headline as three stacked lines; the middle one is rendered as
+      // particle text (see HeroParticleText.jsx). `lead` may be empty.
+      headlineParts: {
+        lead: "Desarrollador",
+        accent: "full-stack",
+        tail: "del modelo de datos a la interfaz.",
+      },
       subheadline:
-        "Java y Spring en el servidor, React en el cliente. Ahora mismo construyo software de gestión para hostelería en IT Salnés.",
+        "Java y Spring en el servidor, React en el cliente. Ahora mismo automatizo procesos con IA en RE/MAX, en el sector inmobiliario.",
       primaryCta: "Ver proyectos",
       secondaryCta: "Descargar CV",
     },
@@ -61,8 +74,8 @@ export const content = {
       label: "Cifras del perfil",
       items: [
         { value: "2+", label: "Años desarrollando" },
-        { value: "8", label: "Proyectos publicados" },
-        { value: "Java · React", label: "Stack principal" },
+        { value: "9", label: "Proyectos publicados" },
+        { value: "Java · React · JavaScript · Python", label: "Stack principal" },
         { value: "ES · EN", label: "Idiomas de trabajo" },
       ],
     },
@@ -89,24 +102,34 @@ export const content = {
       present: "Presente",
       items: [
         {
-          period: "Feb 2025 — Presente",
+          period: "Jul 2026 — Presente",
+          role: "Desarrollador full-stack — IA y Automatización",
+          company: "RE/MAX",
+          summary:
+            "Automatización de procesos con IA en el sector inmobiliario: seguimiento y gestión de leads con la WhatsApp Cloud API, además de soporte y consultoría IT.",
+          impact:
+            "Bots de seguimiento que aumentan la capacidad de respuesta más de un 30 %; relleno automático de contratos con IA que ahorra más de la mitad del tiempo de entrada manual.",
+          stack: ["WhatsApp Cloud API", "Python", "Automatización", "IA"],
+        },
+        {
+          period: "Feb 2026 — Abr 2026",
           role: "Desarrollador full-stack",
           company: "IT Salnés",
           summary:
-            "Aplicaciones de gestión para restaurantes y hoteles: back-end en Java y Spring, cliente Android y paneles web.",
+            "Aplicación web y móvil de gestión para hoteles y restaurantes: escáner de facturas con IA construido desde cero en Java, Spring y MongoDB, cliente Android y paneles web.",
           impact:
-            "Trabajo sobre producto en producción, con integración de modelos de lenguaje para automatizar tareas internas.",
-          stack: ["Java", "Spring", "Android Studio", "JavaScript", "MongoDB"],
+            "Integración de herramientas de IA (Mistral) para ganar productividad sin perder control ni escalabilidad sobre el producto en producción.",
+          stack: ["Java", "Spring", "MongoDB", "Android Studio", "Mistral", "Postman"],
         },
         {
-          period: "Sep 2024 — Ene 2025",
-          role: "Prácticas — Desarrollo multiplataforma",
+          period: "Sep 2024 — Dic 2024",
+          role: "Prácticas — Desarrollador Front-End",
           company: "LoggForSport",
           summary:
             "Web corporativa de eventos deportivos, maquetada desde cero y responsive.",
           impact:
-            "Primer contacto con un flujo de trabajo real: control de versiones, revisiones y entregas con fecha.",
-          stack: ["HTML", "CSS", "Bootstrap", "JavaScript"],
+            "Primer contacto con un flujo de trabajo real: benchmarking del sector, control de versiones, revisiones y entregas con fecha.",
+          stack: ["HTML", "CSS", "JavaScript", "React"],
         },
       ],
       educationTitle: "Formación",
@@ -119,7 +142,17 @@ export const content = {
         {
           period: "2022 — 2024",
           title: "CFGS Desarrollo de Aplicaciones Multiplataforma",
-          place: "DAM",
+          place: "Academia Tesdai",
+        },
+        {
+          period: "03/2026",
+          title: "Desarrollo con IA",
+          place: "BIG School — Escuela de Marketing Digital, IA y Negocios",
+        },
+        {
+          period: "2025",
+          title: "Inteligencia artificial y productividad",
+          place: "Santander Open Academy",
         },
       ],
     },
@@ -130,16 +163,25 @@ export const content = {
       groups: [
         {
           title: "Frontend",
-          items: ["React", "JavaScript", "HTML", "CSS", "Tailwind CSS", "Vite"],
+          items: [
+            "React",
+            "JavaScript",
+            "HTML",
+            "CSS",
+            "Tailwind CSS",
+            "Bootstrap",
+            "Astro",
+            "Vite",
+          ],
         },
         {
           title: "Backend",
-          items: ["Java", "Spring", "Node.js", "Python", "PHP", "API REST"],
+          items: ["Java", "Spring Boot", "Node.js", "Python", "Flask", "PHP", "API REST"],
         },
-        { title: "Datos", items: ["MongoDB", "MySQL", "SQL Server", "Postman"] },
+        { title: "Datos", items: ["MongoDB", "MySQL", "SQLAlchemy"] },
         {
           title: "Herramientas",
-          items: ["Git", "GitHub", "IntelliJ", "Android Studio", "Figma"],
+          items: ["Git", "GitHub", "IntelliJ", "Android Studio", "Postman", "Mistral"],
         },
       ],
     },
@@ -147,7 +189,7 @@ export const content = {
       eyebrow: "Perfil",
       title: "Sobre mí",
       paragraphs: [
-        "Soy desarrollador full-stack en Pontevedra. Llevo más de dos años construyendo aplicaciones web y móviles, primero en formación y ahora sobre producto real en IT Salnés.",
+        "Soy desarrollador full-stack en Pontevedra. Llevo más de dos años construyendo aplicaciones web y móviles: primero en formación, después sobre producto real en IT Salnés y ahora automatizando procesos con IA en RE/MAX.",
         "Me interesa el recorrido completo de una funcionalidad: pensar el modelo de datos, exponer una API que tenga sentido y rematar la interfaz con la que alguien va a convivir todos los días. La parte que más disfruto es la última.",
         "Me formé en el CFGS de Desarrollo de Aplicaciones Multiplataforma y completé el bootcamp full-stack de 4Geeks Academy. Sigo aprendiendo, sobre todo en el terreno de las herramientas de IA aplicadas al desarrollo.",
       ],
@@ -197,8 +239,13 @@ export const content = {
     hero: {
       eyebrow: "Tomás Uhía Otero — Pontevedra, Spain",
       headline: "Full-stack developer, from the data model to the interface.",
+      headlineParts: {
+        lead: "",
+        accent: "Full-stack",
+        tail: "developer, from the data model to the interface.",
+      },
       subheadline:
-        "Java and Spring on the server, React on the client. Currently building hospitality management software at IT Salnés.",
+        "Java and Spring on the server, React on the client. Currently automating processes with AI at RE/MAX, in real estate.",
       primaryCta: "See work",
       secondaryCta: "Download résumé",
     },
@@ -206,8 +253,8 @@ export const content = {
       label: "Profile figures",
       items: [
         { value: "2+", label: "Years building" },
-        { value: "8", label: "Shipped projects" },
-        { value: "Java · React", label: "Core stack" },
+        { value: "9", label: "Shipped projects" },
+        { value: "Java · React · JavaScript · Python", label: "Core stack" },
         { value: "ES · EN", label: "Working languages" },
       ],
     },
@@ -234,24 +281,34 @@ export const content = {
       present: "Present",
       items: [
         {
-          period: "Feb 2025 — Present",
+          period: "Jul 2026 — Present",
+          role: "Full-Stack Developer — AI & Automation",
+          company: "RE/MAX",
+          summary:
+            "Process automation with AI in real estate: lead tracking and follow-up through the WhatsApp Cloud API, plus general IT support and consulting.",
+          impact:
+            "Follow-up bots lifted responsiveness by over 30%; AI-assisted contract data entry cut manual work by more than half.",
+          stack: ["WhatsApp Cloud API", "Python", "Automation", "AI"],
+        },
+        {
+          period: "Feb 2026 — Apr 2026",
           role: "Full-stack developer",
           company: "IT Salnés",
           summary:
-            "Management software for restaurants and hotels: Java and Spring on the back end, an Android client and web dashboards.",
+            "Web and mobile management application for hotels and restaurants: an AI invoice scanner built from zero in Java, Spring and MongoDB, an Android client and web dashboards.",
           impact:
-            "Working on live production software, including language-model integrations that automate internal tasks.",
-          stack: ["Java", "Spring", "Android Studio", "JavaScript", "MongoDB"],
+            "Integrated AI tooling (Mistral) to boost productivity without losing control or scalability over software running in production.",
+          stack: ["Java", "Spring", "MongoDB", "Android Studio", "Mistral", "Postman"],
         },
         {
-          period: "Sep 2024 — Jan 2025",
-          role: "Internship — Cross-platform development",
+          period: "Sep 2024 — Dec 2024",
+          role: "Internship — Front-End Developer",
           company: "LoggForSport",
           summary:
             "Corporate website for sports events, built responsive from scratch.",
           impact:
-            "First exposure to a real workflow: version control, reviews and deadlines.",
-          stack: ["HTML", "CSS", "Bootstrap", "JavaScript"],
+            "First exposure to a real workflow: sector benchmarking, version control, reviews and deadlines.",
+          stack: ["HTML", "CSS", "JavaScript", "React"],
         },
       ],
       educationTitle: "Education",
@@ -260,7 +317,17 @@ export const content = {
         {
           period: "2022 — 2024",
           title: "Higher Diploma in Cross-Platform Application Development",
-          place: "DAM",
+          place: "Academia Tesdai",
+        },
+        {
+          period: "03/2026",
+          title: "AI Development",
+          place: "BIG School — Digital Marketing, AI and Business Academy",
+        },
+        {
+          period: "2025",
+          title: "Artificial Intelligence and Productivity",
+          place: "Santander Open Academy",
         },
       ],
     },
@@ -271,16 +338,25 @@ export const content = {
       groups: [
         {
           title: "Frontend",
-          items: ["React", "JavaScript", "HTML", "CSS", "Tailwind CSS", "Vite"],
+          items: [
+            "React",
+            "JavaScript",
+            "HTML",
+            "CSS",
+            "Tailwind CSS",
+            "Bootstrap",
+            "Astro",
+            "Vite",
+          ],
         },
         {
           title: "Backend",
-          items: ["Java", "Spring", "Node.js", "Python", "PHP", "REST APIs"],
+          items: ["Java", "Spring Boot", "Node.js", "Python", "Flask", "PHP", "REST APIs"],
         },
-        { title: "Data", items: ["MongoDB", "MySQL", "SQL Server", "Postman"] },
+        { title: "Data", items: ["MongoDB", "MySQL", "SQLAlchemy"] },
         {
           title: "Tooling",
-          items: ["Git", "GitHub", "IntelliJ", "Android Studio", "Figma"],
+          items: ["Git", "GitHub", "IntelliJ", "Android Studio", "Postman", "Mistral"],
         },
       ],
     },
@@ -288,7 +364,7 @@ export const content = {
       eyebrow: "Profile",
       title: "About",
       paragraphs: [
-        "I am a full-stack developer based in Pontevedra, Spain. I have spent more than two years building web and mobile applications, first while studying and now on live product at IT Salnés.",
+        "I am a full-stack developer based in Pontevedra, Spain. I have spent more than two years building web and mobile applications: first while studying, then on live product at IT Salnés, and now automating processes with AI at RE/MAX.",
         "What interests me is the whole path of a feature: designing the data model, exposing an API that makes sense, and finishing the interface someone will live with every day. That last part is the one I enjoy most.",
         "I hold a Higher Diploma in Cross-Platform Application Development and completed the 4Geeks Academy full-stack bootcamp. I keep learning, lately around AI tooling applied to development.",
       ],

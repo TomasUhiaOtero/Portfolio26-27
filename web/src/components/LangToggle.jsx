@@ -18,7 +18,7 @@ export default function LangToggle() {
       type="button"
       onClick={handleClick}
       aria-label={t.nav.languageLabel}
-      className="relative flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-line bg-surface text-sm font-semibold text-text active:scale-[0.97]"
+      className="relative flex size-9 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-xl border border-line bg-surface text-sm font-semibold text-text active:scale-[0.97] md:size-10"
     >
       {LANGUAGES.map((code) => (
         <span

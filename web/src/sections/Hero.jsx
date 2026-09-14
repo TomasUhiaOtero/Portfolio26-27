@@ -5,6 +5,7 @@ import useReducedMotion from "../hooks/useReducedMotion.js";
 import useInViewport from "../hooks/useInViewport.js";
 import useIntroTimeline from "../hooks/useIntroTimeline.js";
 import SplitText from "../components/SplitText.jsx";
+import HeroParticleText from "../components/HeroParticleText.jsx";
 import Counter from "../components/Counter.jsx";
 import Button from "../components/Button.jsx";
 import LazyCanvas from "../three/LazyCanvas.jsx";
@@ -27,7 +28,7 @@ const HeroField = lazy(() => import("../three/HeroField.jsx"));
  * section looking correct even if the 3D chunk never loads.
  */
 export default function Hero() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const reduced = useReducedMotion();
   const rootRef = useRef(null);
   const statsRef = useRef(null);
@@ -112,13 +113,37 @@ export default function Hero() {
           {t.hero.eyebrow}
         </p>
 
-        <SplitText
-          as="h1"
-          text={t.hero.headline}
-          animate={false}
-          highlight="full-stack"
-          className="mt-6 text-[clamp(3rem,9vw,8rem)] font-semibold leading-[0.95] tracking-[-0.045em] text-text"
-        />
+        {/* The headline as three stacked lines. The lead and tail are
+            normal word-split text (revealed by the intro timeline via
+            `[data-word]`); the middle line is particle text sampled from
+            the word "full-stack" itself. Its `[data-word]` wrapper hooks
+            it into the same entrance stagger. */}
+        <h1 className="mt-6 text-[clamp(3rem,9vw,8rem)] font-semibold leading-[0.95] tracking-[-0.045em] text-text">
+          {t.hero.headlineParts.lead ? (
+            <SplitText
+              as="span"
+              text={t.hero.headlineParts.lead}
+              animate={false}
+              className="block"
+            />
+          ) : null}
+
+          <span className="block overflow-hidden pb-[0.2em] -mb-[0.2em]">
+            <span
+              data-word
+              className="js-hidden inline-block whitespace-nowrap opacity-0"
+            >
+              <HeroParticleText text={t.hero.headlineParts.accent} />
+            </span>
+          </span>
+
+          <SplitText
+            as="span"
+            text={t.hero.headlineParts.tail}
+            animate={false}
+            className="block"
+          />
+        </h1>
 
         <p data-sub className="js-hidden mt-8 max-w-2xl text-lg text-mute opacity-0">
           {t.hero.subheadline}
@@ -135,7 +160,7 @@ export default function Hero() {
           </Button>
           <Button
             data-cta
-            href={profile.resume}
+            href={profile.resume[lang]}
             variant="ghost"
             className="js-hidden opacity-0"
           >

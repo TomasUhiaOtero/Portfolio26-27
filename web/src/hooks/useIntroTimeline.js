@@ -19,6 +19,21 @@ const CTA = "[data-cta]";
 const STATS = "[data-stats]";
 const CUE = "[data-cue]";
 
+// Whether the entrance sequence has finished revealing the hero at least
+// once this session (instantly, under `!enabled`, or via the timeline's
+// own completion). `SplitText.jsx` reads this: it renders `[data-word]`
+// spans with `animate={false}` under Hero's ownership, and a later prop
+// change (e.g. the headline's words changing on a language switch) mounts
+// brand-new spans that this one-time effect never runs again for. Once
+// the intro is done, SplitText jumps those straight to the resting state
+// itself instead of waiting on a timeline that already finished — see its
+// own comment on this same flag.
+let introDone = false;
+
+export function isIntroDone() {
+  return introDone;
+}
+
 /**
  * Builds and plays the hero's entrance timeline once fonts are ready (or
  * the fallback timer above elapses). Returns nothing — everything this
@@ -56,8 +71,12 @@ export default function useIntroTimeline(rootRef, { enabled = true } = {}) {
           scale: 1,
         });
       }, root);
+      introDone = true;
 
-      return () => ctx.revert();
+      return () => {
+        introDone = false;
+        ctx.revert();
+      };
     }
 
     let cancelled = false;
@@ -75,7 +94,12 @@ export default function useIntroTimeline(rootRef, { enabled = true } = {}) {
       if (cancelled) return;
 
       ctx = gsap.context(() => {
-        const tl = gsap.timeline({ defaults: { ease: ENTRANCE_EASE } });
+        const tl = gsap.timeline({
+          defaults: { ease: ENTRANCE_EASE },
+          onComplete: () => {
+            introDone = true;
+          },
+        });
 
         tl.fromTo(
           CURTAIN,
@@ -146,6 +170,7 @@ export default function useIntroTimeline(rootRef, { enabled = true } = {}) {
 
     return () => {
       cancelled = true;
+      introDone = false;
       ctx?.revert();
     };
   }, [rootRef, enabled]);

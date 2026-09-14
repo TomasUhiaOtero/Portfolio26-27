@@ -48,7 +48,7 @@ describe("About", () => {
     expect(container.querySelector("section#sobre-mi")).toBeInTheDocument();
   });
 
-  it("renders the TechCore scene slot as a decorative LazyCanvas", () => {
+  it("renders the AboutStage scene slot as a decorative LazyCanvas", () => {
     mockReducedMotion(true);
     const { container } = renderWithProviders(<About />);
     // Under reduced motion LazyCanvas never mounts the real canvas (see
@@ -71,19 +71,26 @@ describe("About", () => {
       }
     });
 
-    it("renders only the first technology group (Frontend), not all four", () => {
+    // Below `lg` (and here, under reduced motion — the pin never runs in
+    // either case, see Effect A's `DESKTOP_QUERY` gate) the cross-fading
+    // single slot would sit pinned at stage 0 forever if it were the only
+    // thing rendered: every phone would see "Frontend" and only
+    // "Frontend", with Backend/Data/Tooling never reachable at all. The
+    // fix is a second, always-static block that lists every group —
+    // this asserts that block's content actually reaches the DOM.
+    // `getAllByText` (not `getByText`) throughout: stage 0's own group
+    // legitimately appears twice — once in the hidden-below-`lg`
+    // cross-fade slot (still present in jsdom, which doesn't apply real
+    // breakpoints), once in the always-rendered mobile list.
+    it("renders every technology group, not just the first", () => {
       renderWithProviders(<About />);
-      const [first, second] = t.stack.groups;
 
-      expect(screen.getByText(first.title)).toBeInTheDocument();
-      for (const item of first.items) {
-        expect(screen.getByText(item)).toBeInTheDocument();
+      for (const group of t.stack.groups) {
+        expect(screen.getAllByText(group.title).length).toBeGreaterThan(0);
+        for (const item of group.items) {
+          expect(screen.getAllByText(item).length).toBeGreaterThan(0);
+        }
       }
-
-      // Proves this is a genuine single-group static render (stage pinned
-      // at 0), not every group rendered and merely stacked/hidden by
-      // opacity — the second group's heading must not exist in the DOM.
-      expect(screen.queryByText(second.title)).not.toBeInTheDocument();
     });
 
     it("never creates a ScrollTrigger — no pin runs at all", () => {

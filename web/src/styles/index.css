@@ -205,7 +205,7 @@
       transparent 62%
     );
     transform: translateX(-130%) skewX(-12deg);
-    transition: transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: transform 1.8s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   &:hover::after,
@@ -220,18 +220,88 @@
   }
 }
 
+/* A metallic light streak that sweeps across on a fixed ~8s loop: a slow
+   ~1.8s glide, then it rests off-screen for the rest of the cycle. For a
+   static section that is not a hover target — see `metal-card` for the
+   hover version. Disabled under reduced motion. */
+@keyframes metal-sheen-sweep {
+  0% {
+    transform: translateX(-140%) skewX(-12deg);
+  }
+  22%,
+  100% {
+    transform: translateX(140%) skewX(-12deg);
+  }
+}
+
+@utility metal-sheen-loop {
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      115deg,
+      transparent 42%,
+      color-mix(in srgb, var(--text) 13%, transparent) 50%,
+      transparent 58%
+    );
+    transform: translateX(-140%) skewX(-12deg);
+    animation: metal-sheen-sweep 8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &::after {
+      display: none;
+    }
+  }
+}
+
 /* The project "folder" card: the solid body panel is masked so its
    top-right corner is cut into a file-folder tab dip, and the photo
    layer behind it shows through that cut. `preserveAspectRatio="none"`
    + `mask-size: 100% 100%` scales the shape to any card size. */
-@utility folder-clip {
-  --folder-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 400' preserveAspectRatio='none'%3E%3Cpath d='M24 0H176c8 0 13 4 17 11l12 21c4 7 11 12 20 12h71c13 0 24 11 24 24v308c0 13-11 24-24 24H24C11 400 0 389 0 376V24C0 11 11 0 24 0Z' fill='%23000'/%3E%3C/svg%3E");
-  -webkit-mask-image: var(--folder-mask);
-  mask-image: var(--folder-mask);
-  -webkit-mask-size: 100% 100%;
-  mask-size: 100% 100%;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
+/* The projects grid's folder cards (see ProjectCard.jsx). Only the
+   perspective lives here — the layered folder/photo/flap transforms are
+   Tailwind arbitrary values on the element. A shared perspective on the
+   container is what gives the flap's `rotateX` real depth on hover;
+   without it the rotation looks flat. Reduced motion neutralises the
+   hover transforms at the element, so this is inert there. */
+@utility folder-card {
+  perspective: 1200px;
+}
+
+/* Static backdrop behind each Services photo (see
+   `components/ServiceArt.jsx`) — a soft accent/glow wash that only shows
+   through while a photo is still loading. No keyframes, no per-frame
+   cost: the photo crossfade is the only thing that animates here. */
+@utility service-art-glow {
+  background: radial-gradient(
+    62% 62% at 50% 50%,
+    color-mix(in srgb, var(--accent) 16%, transparent) 0%,
+    color-mix(in srgb, var(--glow) 10%, transparent) 48%,
+    transparent 78%
+  );
+}
+
+/* Legibility scrim for the projects section's heading + filter row: a
+   gentle pool of the page background over the animated point field so the
+   muted copy and the filter chips keep a calm ground. Mixes toward
+   `var(--bg)` (not a fixed colour) so it works on both themes. The radial
+   fades to full transparency well within its box, and a linear mask fades
+   the lower edge — together they leave no hard seam where the layer ends. */
+@utility work-copy-scrim {
+  background: radial-gradient(
+    68% 84% at 20% 28%,
+    color-mix(in srgb, var(--bg) 58%, transparent) 0%,
+    color-mix(in srgb, var(--bg) 24%, transparent) 44%,
+    transparent 72%
+  );
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%);
 }
 
 /* `inline` makes the generated utilities resolve `var(--bg)` at use time,

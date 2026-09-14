@@ -197,7 +197,7 @@ export default function ProjectOverlay({ project, onClose, originRef }) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-bg/80 p-4 backdrop-blur-sm sm:p-8"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-bg/90 p-4 sm:p-8"
       onClick={handleBackdropClick}
     >
       <div
@@ -212,7 +212,7 @@ export default function ProjectOverlay({ project, onClose, originRef }) {
           type="button"
           onClick={onClose}
           aria-label={t.projects.close}
-          className="absolute right-4 top-4 z-10 flex size-10 items-center justify-center rounded-xl border border-line bg-surface/80 text-text outline-none backdrop-blur-xl transition-transform duration-200 ease-entrance active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-accent"
+          className="absolute right-4 top-4 z-10 flex size-10 cursor-pointer items-center justify-center rounded-xl border border-line bg-surface text-text outline-none transition-transform duration-200 ease-entrance active:scale-[0.97] focus-visible:ring-2 focus-visible:ring-accent"
         >
           <span aria-hidden>×</span>
         </button>

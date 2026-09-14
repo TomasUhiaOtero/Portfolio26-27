@@ -1,16 +1,10 @@
-import { lazy, useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
 import { PROJECT_FILTERS, projectsByFilter } from "../data/projects.js";
 import Reveal from "../components/Reveal.jsx";
 import ProjectCard from "../components/ProjectCard.jsx";
 import ProjectOverlay from "../components/ProjectOverlay.jsx";
-import LazyCanvas from "../three/LazyCanvas.jsx";
-
-// Lazy, not a static import — keeps three/@react-three out of the initial
-// bundle (see Hero.jsx's identical comment). The backdrop is an ambient
-// glow behind the grid; it drifts on its own clock now that the section
-// is a static grid rather than a carousel with an index to follow.
-const WorkBackdrop = lazy(() => import("../three/WorkBackdrop.jsx"));
+import DiamondGrid from "../components/DiamondGrid.jsx";
 
 /**
  * The projects section: a filterable grid of "folder" cards (see
@@ -41,16 +35,21 @@ export default function Work() {
       className="relative isolate border-t border-line py-24 sm:py-32"
       data-selected-project={selectedProject?.id}
     >
-      <LazyCanvas
-        poster={{ dark: "/img/work-poster.webp", light: "/img/work-poster-light.webp" }}
-        dprVariant="backdrop"
-        className="absolute inset-0 -z-10 overflow-hidden opacity-70"
-      >
-        <WorkBackdrop />
-      </LazyCanvas>
+      {/* Background: a seeded diagonal diamond grid with travelling light
+          pulses (see components/DiamondGrid.jsx) — its own built-in mask
+          already keeps the centre bright and the corners dim, so no
+          separate vignette layer is needed here. */}
+      <DiamondGrid className="absolute inset-0 -z-10" />
+
+      {/* Legibility scrim for the heading + filter row (see
+          `work-copy-scrim`): sits above the diamond grid, below the copy. */}
+      <div
+        aria-hidden="true"
+        className="work-copy-scrim pointer-events-none absolute left-0 top-0 -z-[4] h-[600px] w-[760px] max-w-full"
+      />
 
       <div className="mx-auto w-full max-w-[1400px] px-6 sm:px-10">
-        <Reveal as="p" className="text-xs uppercase tracking-[0.3em] text-mute">
+        <Reveal as="p" className="text-xs uppercase tracking-[0.3em] text-text/70">
           {t.projects.eyebrow}
         </Reveal>
         <Reveal
@@ -60,7 +59,7 @@ export default function Work() {
         >
           {t.projects.title}
         </Reveal>
-        <Reveal as="p" delay={0.08} className="mt-3 max-w-xl text-lg text-mute">
+        <Reveal as="p" delay={0.08} className="mt-3 max-w-xl text-lg text-text/85">
           {t.projects.intro}
         </Reveal>
 
@@ -79,10 +78,10 @@ export default function Work() {
                 type="button"
                 onClick={() => setFilter(key)}
                 aria-pressed={active}
-                className={`cursor-pointer rounded-xl border px-4 py-2 text-sm font-medium transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-accent ${
+                className={`cursor-pointer rounded-xl border px-4 py-2 text-sm font-medium shadow-sm transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-accent ${
                   active
                     ? "border-accent bg-accent text-bg"
-                    : "border-line text-mute hover:border-text/30 hover:text-text"
+                    : "border-text/15 bg-surface text-text hover:border-accent/60 hover:text-accent"
                 }`}
               >
                 {t.projects.filters[key]}
@@ -91,7 +90,7 @@ export default function Work() {
           })}
         </Reveal>
 
-        <ul className="mt-12 grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mx-auto mt-12 grid max-w-6xl grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
           {shown.map((project) => (
             <li key={project.id}>
               <ProjectCard project={project} onOpen={openProject} />

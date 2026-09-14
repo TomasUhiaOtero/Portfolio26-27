@@ -13,13 +13,13 @@ import LazyCanvas from "../three/LazyCanvas.jsx";
 gsap.registerPlugin(ScrollTrigger);
 
 // Lazy, not a static import: see Hero.jsx's identical comment on
-// `HeroField` — a plain `import TechCore from "../three/TechCore.jsx"`
+// `HeroField` — a plain `import AboutStage from "../three/AboutStage.jsx"`
 // here would pull three/@react-three into this module's import graph
 // statically, and About.jsx is reachable from the app's entry point.
 // Wrapping the reference in `React.lazy` defers the `import()` to
 // LazyCanvas's own first render attempt, which it only makes once this
 // section nears the viewport.
-const TechCore = lazy(() => import("../three/TechCore.jsx"));
+const AboutStage = lazy(() => import("../three/AboutStage.jsx"));
 
 // Matches Tailwind's default `lg` breakpoint. There is no Tailwind v4 JS
 // config to import this from (index.css's `@theme` block only defines
@@ -246,11 +246,17 @@ export default function About() {
             ))}
           </div>
 
-          <div ref={groupRef} className="mt-10">
-            <h3 className="text-sm font-medium uppercase tracking-[0.2em] text-mute">
+          {/* Desktop (`lg`+): the single slot Effects A/B/C drive, cross-
+              fading between groups as the pin scrolls. Hidden, not
+              unmounted, below `lg` — the pin itself never runs there
+              (Effect A's own `DESKTOP_QUERY` gate), so `stage` would
+              otherwise sit at 0 forever and this block would show
+              "Frontend" and only "Frontend" on every phone. */}
+          <div ref={groupRef} className="mt-10 hidden lg:block">
+            <h3 className="text-xs font-semibold uppercase tracking-[0.25em] text-text/70">
               {group.title}
             </h3>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-4 flex flex-wrap gap-2.5">
               {group.items.map((item) => (
                 <Chip key={item} data-chip>
                   {item}
@@ -258,10 +264,30 @@ export default function About() {
               ))}
             </div>
           </div>
+
+          {/* Below `lg`: every group shown at once, stacked, each fading
+              in with `Reveal` as it scrolls into view — the same static-
+              but-animated fork Services.jsx uses for its own panels.
+              Never scroll-linked to `stage`, so it needs none of Effects
+              A/B/C's machinery. */}
+          <div className="mt-10 space-y-8 lg:hidden">
+            {t.stack.groups.map((stackGroup, index) => (
+              <Reveal as="div" key={stackGroup.title} delay={Math.min(index, 3) * 0.05}>
+                <h3 className="text-xs font-semibold uppercase tracking-[0.25em] text-text/70">
+                  {stackGroup.title}
+                </h3>
+                <div className="mt-4 flex flex-wrap gap-2.5">
+                  {stackGroup.items.map((item) => (
+                    <Chip key={item}>{item}</Chip>
+                  ))}
+                </div>
+              </Reveal>
+            ))}
+          </div>
         </div>
 
         {/* Right column: a self-contained slot. `LazyCanvas` owns its own
-            `aria-hidden`, so a failure inside `TechCore` can never take
+            `aria-hidden`, so a failure inside `AboutStage` can never take
             the rest of this section down with it. The `aspect-[4/5]`
             below `lg` and `lg:h-full` above it are the sizing Task 8's
             review fixed on the placeholder this replaces — the parent
@@ -272,7 +298,7 @@ export default function About() {
           poster={{ dark: "/img/about-poster.webp", light: "/img/about-poster-light.webp" }}
           className="relative aspect-[4/5] w-full overflow-hidden rounded-[28px] border border-line bg-surface-2 lg:aspect-auto lg:h-full"
         >
-          <TechCore progressRef={progressRef} stage={stage} />
+          <AboutStage progressRef={progressRef} stage={stage} />
         </LazyCanvas>
       </div>
     </section>

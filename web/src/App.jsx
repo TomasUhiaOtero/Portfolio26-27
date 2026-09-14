@@ -1,6 +1,7 @@
 import { ThemeProvider } from "./theme/ThemeProvider.jsx";
 import { LanguageProvider, useLanguage } from "./i18n/LanguageProvider.jsx";
 import SideRail from "./components/SideRail.jsx";
+import SiteLogo from "./components/SiteLogo.jsx";
 import Hero from "./sections/Hero.jsx";
 import About from "./sections/About.jsx";
 import Services from "./sections/Services.jsx";
@@ -64,6 +65,7 @@ function AppShell() {
       </a>
 
       <main id="main" className="relative min-h-dvh bg-bg text-text">
+        <SiteLogo />
         <SideRail />
         <Hero />
         <About />

@@ -17,7 +17,7 @@ export default function ThemeToggle() {
       type="button"
       onClick={toggle}
       aria-label={label}
-      className="relative flex size-10 shrink-0 items-center justify-center rounded-xl border border-line bg-surface text-text transition-transform duration-200 ease-entrance active:scale-[0.97]"
+      className="relative flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-line bg-surface text-text transition-transform duration-200 ease-entrance active:scale-[0.97] md:size-10"
     >
       <SunIcon
         aria-hidden="true"

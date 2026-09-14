@@ -55,7 +55,7 @@ describe("Contact", () => {
     );
     expect(screen.getByRole("link", { name: t.about.resumeCta })).toHaveAttribute(
       "href",
-      profile.resume,
+      profile.resume[DEFAULT_LANGUAGE],
     );
   });
 });

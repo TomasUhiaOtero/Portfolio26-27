@@ -19,14 +19,6 @@ vi.mock("../hooks/useLenis.js", () => ({
 
 const t = content[DEFAULT_LANGUAGE];
 
-// The panel is the only `<div>` carrying `aria-hidden="true"` directly under
-// the rail — the per-bar indicator spans also carry `aria-hidden="true"`,
-// but they're `<span>`s, so this selector can't accidentally match one of
-// them.
-function railPanel(container) {
-  return container.querySelector('nav > div[aria-hidden="true"]');
-}
-
 describe("SideRail", () => {
   it("renders one button per navigation link", () => {
     renderWithProviders(<SideRail />);
@@ -59,49 +51,22 @@ describe("SideRail", () => {
     ).toBeInTheDocument();
   });
 
-  describe("the decorative label panel", () => {
-    it("carries inert while collapsed, and does not while expanded", async () => {
-      const { container } = renderWithProviders(<SideRail />);
-      const panel = railPanel(container);
-      expect(panel).toBeTruthy();
-      // jsdom (v30, as pinned by this project) doesn't implement the
-      // `inert` IDL property at all — `panel.inert` is `undefined`
-      // regardless of the attribute (confirmed by probing a plain
-      // `<div inert>` outside this suite: `'inert' in div` is `false`).
-      // `hasAttribute` is the only jsdom-visible signal of the actual
-      // markup, so that's what's asserted here.
-      expect(panel.hasAttribute("inert")).toBe(true);
-
-      const user = userEvent.setup();
-      // Focusing the first bar (the first Tab stop in the document) is the
-      // rail's own `onFocus` → expand path, exactly what a keyboard user
-      // hitting Tab triggers.
-      await user.tab();
-
-      expect(panel.hasAttribute("inert")).toBe(false);
+  describe("the per-item tooltips", () => {
+    it("gives every link button a decorative, aria-hidden label tooltip", () => {
+      renderWithProviders(<SideRail />);
+      for (const link of t.nav.links) {
+        const button = screen.getByRole("button", { name: link.label });
+        const tip = button.querySelector('span[aria-hidden="true"]');
+        expect(tip).toBeTruthy();
+        expect(tip).toHaveTextContent(link.label);
+      }
     });
 
-    it("is hidden from assistive tech", () => {
-      const { container } = renderWithProviders(<SideRail />);
-      expect(railPanel(container)).toHaveAttribute("aria-hidden", "true");
-    });
-
-    // jsdom (v30, as pinned by this project) does not implement `inert` at
-    // all beyond reflecting it as a plain attribute (no IDL property, and
-    // none of its browser behaviour) — confirmed by probing a minimal
-    // `<div inert><button/></div>` outside this suite: `userEvent.tab()`
-    // moved focus straight into it regardless of the attribute. So a
-    // Tab-traversal assertion cannot prove `inert` is what's keeping the
-    // panel out of the tab order — jsdom would let a real interactive
-    // descendant grab focus even with `inert` set. What it *can* prove,
-    // for real, via a real interaction,
-    // is that today's panel contributes zero tab stops: the whole Tab
-    // sequence below is exactly the 8 real buttons, in DOM order, with no
-    // extra or missing stop from the panel. That is the same property the
-    // task 7 implementer checked by hand in a real browser once; this
-    // repeats it in CI. The `inert`/`aria-hidden` tests above cover the
-    // actual mechanism the real browser relies on.
-    it("contributes no Tab stops while collapsed — the full sequence is exactly the 8 real buttons", async () => {
+    // The tooltips are `aria-hidden` `<span>`s, never focusable, so the
+    // whole Tab sequence is exactly the 8 real buttons in DOM order —
+    // nothing the tooltip markup contributes. (Same property the rail's
+    // old hover panel was checked for; kept now for the icon buttons.)
+    it("contributes no Tab stops — the full sequence is exactly the 8 real buttons", async () => {
       renderWithProviders(<SideRail />);
       const user = userEvent.setup();
 
@@ -113,13 +78,9 @@ describe("SideRail", () => {
 
       for (const name of expectedOrder) {
         await user.tab();
-        expect(document.activeElement).toBe(
-          screen.getByRole("button", { name }),
-        );
+        expect(document.activeElement).toBe(screen.getByRole("button", { name }));
       }
 
-      // A 9th Tab must leave the rail entirely, not loop back or land on
-      // anything the panel might have contributed.
       await user.tab();
       expect(
         expectedOrder.some(

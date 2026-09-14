@@ -1,4 +1,4 @@
-import { lazy, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import ScrollTrigger from "gsap/ScrollTrigger";
 import { useLanguage } from "../i18n/LanguageProvider.jsx";
@@ -7,19 +7,10 @@ import { services } from "../data/services.js";
 import useReducedMotion from "../hooks/useReducedMotion.js";
 import Reveal from "../components/Reveal.jsx";
 import Chip from "../components/Chip.jsx";
+import ServiceVisual, { ServicePhoto } from "../components/ServiceArt.jsx";
 import { onEnterIndex, onLeaveBackIndex } from "./servicesScroll.js";
-import LazyCanvas from "../three/LazyCanvas.jsx";
 
 gsap.registerPlugin(ScrollTrigger);
-
-// Lazy, not a static import: see Hero.jsx's/About.jsx's identical comment
-// on `HeroField`/`TechCore` — a plain `import ServiceStage from
-// "../three/ServiceStage.jsx"` here would pull three/@react-three into
-// this module's import graph statically, and Services.jsx is reachable
-// from the app's entry point. Wrapping the reference in `React.lazy`
-// defers the `import()` to LazyCanvas's own first render attempt, which
-// it only makes once this section nears the viewport.
-const ServiceStage = lazy(() => import("../three/ServiceStage.jsx"));
 
 // Matches Tailwind's default `lg` breakpoint — About.jsx's own comment on
 // its identical constant explains why this is hardcoded rather than
@@ -31,38 +22,17 @@ function eyebrow(index) {
 }
 
 /**
- * A single service's placeholder visual: an eyebrow index plus its title,
- * centred in a `bg-surface` panel. Task 11 replaced the sticky slot's
- * instance of this wholesale with `<LazyCanvas><ServiceStage /></LazyCanvas>`
- * (decorative/`aria-hidden`, so no text needed there); this component now
- * only backs each panel's own static mobile placeholder below.
- */
-function ServicePlaceholder({ index, service, lang }) {
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-3 p-10 text-center">
-      <span className="text-xs uppercase tracking-[0.3em] text-mute">{eyebrow(index)}</span>
-      <span className="text-2xl font-semibold tracking-tight text-text">
-        {localized(service.title, lang)}
-      </span>
-    </div>
-  );
-}
-
-/**
  * The services section: a two-column grid at `lg` — a sticky visual slot
  * on the left, four scrolling panels on the right (the "Resonance"
  * pattern per spec §6.4). One `ScrollTrigger` per panel sets
  * `activeService` (0-3) as it scrolls into view; the sticky slot's
- * `<ServiceStage />` morphs to match.
+ * `<ServiceVisual />` crossfades its icon to match (see
+ * `components/ServiceArt.jsx` — plain SVG, no WebGL scene to mount).
  *
- * `activeService` is state, not a ref — `<ServiceStage />` reads it as a
- * prop the way Task 9's `TechCore` read About's `stage`, and it only
- * changes four times per pass, so a real render each time is cheap.
- * `ServiceStage` reads `activeService` directly rather than some lagged
- * "visible" version: it owns its own transition timing (a `uProgress`
- * tween inside the scene itself, see `three/ServiceStage.jsx`), so unlike
- * a DOM cross-fade it has no reason to wait on anything else finishing
- * first.
+ * `activeService` is state, not a ref: `<ServiceVisual />` reads it as a
+ * prop and only changes four times per pass, so a real render each time
+ * is cheap and the crossfade is a plain CSS transition on `opacity`/
+ * `scale`, no separate tween to own.
  *
  * Below `lg`, and under reduced motion at any width, no `ScrollTrigger` is
  * ever created (see Effect A) — structurally the mobile layout does not
@@ -76,7 +46,7 @@ export default function Services() {
 
   const panelRefs = useRef([]);
 
-  // The panel the scroll position currently targets (0-3). `ServiceStage`
+  // The panel the scroll position currently targets (0-3). `ServiceVisual`
   // reads this directly as its `active` prop.
   const [activeService, setActiveService] = useState(0);
 
@@ -132,20 +102,15 @@ export default function Services() {
   return (
     <section id="servicios" className="relative border-t border-line">
       <div className="mx-auto grid w-full max-w-[1400px] gap-12 px-6 py-24 sm:px-10 lg:grid-cols-2 lg:gap-16 lg:py-32">
-        {/* Sticky visual: a self-contained slot. `LazyCanvas` owns its own
-            `aria-hidden`, the same discipline Hero.jsx's background layer
-            and About.jsx's right column already follow — so a failure
-            inside `ServiceStage` can never take the rest of this section
-            down with it. Decorative only; the panel column below never
-            assumes anything about what lives inside this box beyond its
-            own. */}
-        <div className="hidden lg:block">
-          <LazyCanvas
-            poster={{ dark: "/img/services-poster.webp", light: "/img/services-poster-light.webp" }}
-            className="sticky top-24 aspect-[4/5] overflow-hidden rounded-3xl bg-surface"
-          >
-            <ServiceStage active={activeService} />
-          </LazyCanvas>
+        {/* Sticky visual: a self-contained, `aria-hidden` slot — decorative
+            only, the panel column below never assumes anything about what
+            lives inside this box beyond its own. Plain SVG (see
+            `ServiceArt.jsx`), so unlike the WebGL scene it replaces there
+            is nothing to lazily mount or fail. */}
+        <div aria-hidden="true" className="hidden lg:block">
+          <div className="sticky top-24 aspect-[4/5] overflow-hidden rounded-3xl bg-surface">
+            <ServiceVisual services={services} active={activeService} />
+          </div>
         </div>
 
         <div>
@@ -157,17 +122,21 @@ export default function Services() {
               }}
               className="border-b border-line py-14 first:pt-0 last:border-0"
             >
-              {/* Inline visual: always rendered, never scroll-linked —
-                  the structural half of the mobile fork. `lg:hidden`, not
-                  a duplicate of the sticky slot above: this is a separate,
-                  static placeholder per panel, so Effect A's ScrollTrigger
-                  (gated to `lg`) never has anything to do with it. */}
-              <div
+              {/* Inline visual: always rendered, never scroll-linked to
+                  `activeService` — the structural half of the mobile
+                  fork. `lg:hidden`, not a duplicate of the sticky slot
+                  above: this is a separate, static photo per panel, so
+                  Effect A's ScrollTrigger (gated to `lg`) never has
+                  anything to do with it. No text here — the eyebrow/title
+                  right below already carry it. Still wrapped in `Reveal`
+                  so it fades/rises in with the rest of the panel instead
+                  of appearing as the one static element on the page. */}
+              <Reveal
                 aria-hidden="true"
-                className="mb-8 aspect-[4/5] w-full overflow-hidden rounded-3xl bg-surface lg:hidden"
+                className="service-art-glow mb-8 aspect-[4/5] w-full overflow-hidden rounded-3xl bg-surface lg:hidden"
               >
-                <ServicePlaceholder index={index} service={service} lang={lang} />
-              </div>
+                <ServicePhoto id={service.id} className="h-full w-full object-cover" />
+              </Reveal>
 
               <Reveal as="p" className="text-xs uppercase tracking-[0.3em] text-mute">
                 {eyebrow(index)}

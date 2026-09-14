@@ -17,7 +17,7 @@ import Reveal from "../components/Reveal.jsx";
  * ancestor.
  */
 export default function Contact() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const c = t.contact;
 
   const links = [
@@ -25,13 +25,13 @@ export default function Contact() {
     { label: c.locationLabel, value: c.location, href: null },
     { label: c.githubLabel, value: "GitHub", href: profile.github },
     { label: c.linkedinLabel, value: "LinkedIn", href: profile.linkedin },
-    { label: c.resumeLabel, value: t.about.resumeCta, href: profile.resume },
+    { label: c.resumeLabel, value: t.about.resumeCta, href: profile.resume[lang] },
   ];
 
   return (
     <section
       id="contacto"
-      className="relative flex min-h-dvh flex-col justify-center border-t border-line bg-surface py-24 sm:py-32"
+      className="metal-sheen-loop relative flex min-h-dvh flex-col justify-center border-t border-line bg-surface py-24 sm:py-32"
     >
       <div className="mx-auto w-full max-w-[1400px] px-6 sm:px-10">
         <Reveal as="p" className="text-xs uppercase tracking-[0.3em] text-mute">
