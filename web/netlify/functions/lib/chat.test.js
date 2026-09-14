@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
-import handler from "./chat.js";
-import { REQUEST_LIMITS } from "./lib/requestGuards.js";
+import handler from "../chat.js";
+import { REQUEST_LIMITS } from "./requestGuards.js";
 
 function makeRequest({ method = "POST", headers = {}, body } = {}) {
   const map = new Map(Object.entries(headers).map(([key, value]) => [key.toLowerCase(), value]));
