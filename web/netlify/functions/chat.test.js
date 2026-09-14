@@ -113,4 +113,25 @@ describe("chat handler", () => {
     }
     expect(last.status).toBe(429);
   });
+
+  it("returns 502 when Groq responds with ok status but invalid JSON", async () => {
+    vi.stubEnv("GROQ_API_KEY", "test-key");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => {
+          throw new Error("invalid json");
+        },
+      }),
+    );
+
+    const response = await handler(
+      makeRequest({
+        headers: { "x-nf-client-connection-ip": "1.1.1.7" },
+        body: { messages: [{ role: "user", content: "hola" }] },
+      }),
+    );
+    expect(response.status).toBe(502);
+  });
 });

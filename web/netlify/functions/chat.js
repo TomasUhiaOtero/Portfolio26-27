@@ -78,7 +78,13 @@ export default async function handler(req) {
     return json({ error: "upstream_error" }, 502);
   }
 
-  const data = await upstream.json();
+  let data;
+  try {
+    data = await upstream.json();
+  } catch {
+    return json({ error: "upstream_error" }, 502);
+  }
+
   const reply = data?.choices?.[0]?.message?.content;
   if (!reply) {
     return json({ error: "empty_reply" }, 502);
