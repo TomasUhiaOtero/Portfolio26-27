@@ -2,6 +2,7 @@ import { ThemeProvider } from "./theme/ThemeProvider.jsx";
 import { LanguageProvider, useLanguage } from "./i18n/LanguageProvider.jsx";
 import SideRail from "./components/SideRail.jsx";
 import SiteLogo from "./components/SiteLogo.jsx";
+import ChatWidget from "./components/ChatWidget.jsx";
 import Hero from "./sections/Hero.jsx";
 import About from "./sections/About.jsx";
 import Services from "./sections/Services.jsx";
@@ -67,6 +68,7 @@ function AppShell() {
       <main id="main" className="relative min-h-dvh bg-bg text-text">
         <SiteLogo />
         <SideRail />
+        <ChatWidget />
         <Hero />
         <About />
         <Services />

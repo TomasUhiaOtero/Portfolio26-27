@@ -213,6 +213,17 @@ export const content = {
       builtWith: "Hecho con React, Vite, Tailwind CSS, GSAP y three.js.",
       backToTop: "Volver arriba",
     },
+    chat: {
+      openLabel: "Abrir el chat",
+      closeLabel: "Cerrar el chat",
+      title: "Pregúntame sobre mi perfil",
+      placeholder: "Escribe tu pregunta…",
+      send: "Enviar",
+      greeting:
+        "¡Hola! Puedo responder preguntas sobre mi experiencia, proyectos y stack. ¿Qué quieres saber?",
+      thinking: "Escribiendo…",
+      errorMessage: "No he podido responder. Inténtalo de nuevo en un momento.",
+    },
   },
 
   en: {
@@ -386,6 +397,16 @@ export const content = {
       rights: "All rights reserved.",
       builtWith: "Built with React, Vite, Tailwind CSS, GSAP and three.js.",
       backToTop: "Back to top",
+    },
+    chat: {
+      openLabel: "Open chat",
+      closeLabel: "Close chat",
+      title: "Ask me about my profile",
+      placeholder: "Type your question…",
+      send: "Send",
+      greeting: "Hi! I can answer questions about my experience, projects and stack. What would you like to know?",
+      thinking: "Typing…",
+      errorMessage: "I couldn't reply. Please try again in a moment.",
     },
   },
 };

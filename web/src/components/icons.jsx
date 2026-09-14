@@ -40,3 +40,20 @@ export function MoonIcon({ className, ...props }) {
     </svg>
   );
 }
+
+export function ChatIcon({ className, ...props }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      {...props}
+    >
+      <path d="M4 5.5h16v10.5H10l-4.5 4v-4H4z" />
+    </svg>
+  );
+}
