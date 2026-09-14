@@ -12,6 +12,17 @@
 [build.environment]
   NODE_VERSION = "22"
 
+[functions]
+  directory = "netlify/functions"
+
+# `netlify dev` needs to be told explicitly how to run Vite and on which
+# port to proxy — auto-detection is flaky for a Vite project living in a
+# non-root `base` directory.
+[dev]
+  command = "npm run dev"
+  targetPort = 5173
+  port = 8888
+
 # SPA de una sola página: cualquier ruta desconocida sirve el index.
 [[redirects]]
   from = "/*"
