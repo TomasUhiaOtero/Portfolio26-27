@@ -6,7 +6,7 @@
 
 **Architecture:** A stateless Netlify Function (`web/netlify/functions/chat.js`) validates the request, builds a system prompt from `src/data/content.js` / `projects.js` / `services.js`, and proxies to Groq's OpenAI-compatible chat-completions endpoint. A new `ChatWidget.jsx` component (bottom-right floating bubble, no persistence) is the only caller. No database, no server-side session state beyond an in-memory per-IP rate limiter.
 
-**Tech Stack:** Netlify Functions v2 (Web `Request`/`Response`, no `@netlify/functions` package), Groq API (`llama-3.3-70b-versatile`), React 19, Vitest + Testing Library, `netlify-cli` for local dev.
+**Tech Stack:** Netlify Functions v2 (Web `Request`/`Response`, no `@netlify/functions` package), Groq API (`openai/gpt-oss-120b`), React 19, Vitest + Testing Library, `netlify-cli` for local dev.
 
 **Spec:** [docs/superpowers/specs/2026-09-14-portfolio-chatbot-design.md](../specs/2026-09-14-portfolio-chatbot-design.md)
 
@@ -64,7 +64,7 @@ Create `web/.env.example`:
 # Free key from https://console.groq.com — required for netlify/functions/chat.js.
 GROQ_API_KEY=
 
-# Optional. Defaults to llama-3.3-70b-versatile if unset.
+# Optional. Defaults to openai/gpt-oss-120b if unset.
 GROQ_MODEL=
 ```
 
@@ -634,7 +634,7 @@ export default async function handler(req) {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
+        model: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
         messages: [{ role: "system", content: buildSystemPrompt() }, ...body.messages],
         temperature: 0.4,
         max_tokens: 600,

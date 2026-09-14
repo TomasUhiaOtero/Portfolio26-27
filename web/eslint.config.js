@@ -5,7 +5,12 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import { defineConfig, globalIgnores } from "eslint/config";
 
 export default defineConfig([
-  globalIgnores(["dist"]),
+  // `.netlify` is netlify-cli's own local cache — `netlify dev` bundles
+  // *.test.js files it finds directly under netlify/functions/ into there
+  // too (it doesn't apply the same test-file exclusion the production
+  // bundler does), inlining their whole dependency tree. Never lint
+  // generated output.
+  globalIgnores(["dist", ".netlify"]),
   {
     files: ["**/*.{js,jsx}"],
     extends: [

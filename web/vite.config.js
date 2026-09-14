@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import { configDefaults } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
@@ -45,5 +46,10 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./vitest.setup.js"],
     css: false,
+    // `.netlify` is netlify-cli's local cache: `netlify dev` bundles a
+    // whole copy of any *.test.js file it finds directly under
+    // netlify/functions/ (it doesn't apply the production bundler's
+    // test-file exclusion), and vitest's default excludes don't cover it.
+    exclude: [...configDefaults.exclude, "**/.netlify/**"],
   },
 });

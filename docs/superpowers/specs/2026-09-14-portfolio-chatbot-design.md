@@ -16,7 +16,7 @@ Navegador (ChatWidget.jsx)
    ▼
 Netlify Function (chat.js)
    │  construye system prompt desde src/data/*.js
-   │  llama a Groq (llama-3.3-70b-versatile)
+   │  llama a Groq (openai/gpt-oss-120b)
    ▼
 Respuesta { reply: string }
 ```
@@ -56,7 +56,7 @@ tamaño, ver "Abuso").
 - Llama a la API de Groq (`https://api.groq.com/openai/v1/chat/completions`,
   compatible con el formato de OpenAI) con la `GROQ_API_KEY` leída de
   `process.env`. Modelo configurable vía `GROQ_MODEL`, por defecto
-  `llama-3.3-70b-versatile`.
+  `openai/gpt-oss-120b`.
 - Limitador de abuso en memoria: un `Map<ip, {count, resetAt}>` a nivel de
   módulo (vive mientras la instancia de la función esté caliente), tope de
   20 peticiones por IP cada 10 minutos → `429` al superarlo. Se reinicia en
