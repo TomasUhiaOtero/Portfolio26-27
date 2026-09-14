@@ -1087,13 +1087,9 @@ git commit -m "feat(web): add the floating ChatWidget and wire it into the app"
 
 ## Task 5: Local dev tooling and a final end-to-end check
 
-**Files:**
-- Modify: `web/package.json` (adds `netlify-cli` — via `npm install`, not a hand edit)
+- [ ] **Step 1: Use `netlify-cli` for local dev without installing it as a project dependency**
 
-- [ ] **Step 1: Install `netlify-cli` as a dev dependency**
-
-Run: `cd web && npm install --save-dev netlify-cli`
-Expected: `package.json`'s `devDependencies` and `package-lock.json` are updated.
+`netlify-cli` is not added to `web/package.json`. Local Netlify Functions development runs it via `npx netlify-cli`, which downloads/caches it separately on first use — this avoids a real peer conflict between `netlify-cli` and vitest's optional `@opentelemetry/api` range that otherwise forces `--legacy-peer-deps` and produces an inconsistent `package-lock.json` (breaking `npm ci`, i.e. the Netlify build).
 
 - [ ] **Step 2: Get a free Groq API key and set it locally**
 
