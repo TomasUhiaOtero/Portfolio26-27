@@ -72,7 +72,7 @@ export default function ChatWidget() {
         onClick={() => setOpen((value) => !value)}
         aria-label={open ? c.closeLabel : c.openLabel}
         aria-expanded={open}
-        className="fixed bottom-5 right-5 z-40 flex size-12 cursor-pointer items-center justify-center rounded-full border border-line bg-accent text-bg shadow-[0_8px_30px_-12px_rgba(0,0,0,0.5)] transition-transform duration-200 ease-entrance active:scale-[0.97]"
+        className="fixed bottom-20 md:bottom-5 right-5 z-40 flex size-12 cursor-pointer items-center justify-center rounded-full border border-line bg-accent text-bg shadow-[0_8px_30px_-12px_rgba(0,0,0,0.5)] transition-transform duration-200 ease-entrance active:scale-[0.97]"
       >
         <ChatIcon aria-hidden="true" className="size-6" />
       </button>
@@ -81,8 +81,9 @@ export default function ChatWidget() {
         <div
           ref={panelRef}
           role="dialog"
+          aria-modal="true"
           aria-labelledby={titleId}
-          className="fixed bottom-20 right-5 z-40 flex max-h-[70vh] w-[calc(100vw-2.5rem)] max-w-sm flex-col overflow-hidden rounded-[22px] border border-line bg-surface/95 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.5)] backdrop-blur-xl"
+          className="fixed bottom-36 md:bottom-20 right-5 z-40 flex max-h-[70vh] w-[calc(100vw-2.5rem)] max-w-sm flex-col overflow-hidden rounded-[22px] border border-line bg-surface/95 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.5)] backdrop-blur-xl"
         >
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             <h2 id={titleId} className="text-sm font-semibold text-text">
